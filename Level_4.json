@@ -1,0 +1,99 @@
+{
+  "format": "the-snake-level",
+  "version": 1,
+  "name": "Lvel 1",
+  "width": 1000,
+  "height": 2200,
+  "snakes": [
+    {
+      "id": "5b2cd02d-1e80-4ff0-a837-aa5377971e85",
+      "name": "Schlange 1",
+      "headPng": "",
+      "bodyPng": "",
+      "segments": 100,
+      "speed": 90,
+      "waypoints": [
+        {
+          "x": 29,
+          "y": 27
+        },
+        {
+          "x": 972,
+          "y": 32
+        },
+        {
+          "x": 972,
+          "y": 92
+        },
+        {
+          "x": 40,
+          "y": 100
+        },
+        {
+          "x": 39,
+          "y": 160
+        },
+        {
+          "x": 976,
+          "y": 167
+        }
+      ]
+    },
+    {
+      "id": "e8b92815-f0ac-4ae3-88b8-e43a22547c3c",
+      "name": "Schlange 2",
+      "headPng": "",
+      "bodyPng": "",
+      "segments": 30,
+      "speed": 90,
+      "waypoints": []
+    },
+    {
+      "id": "d93906d2-bda6-4eeb-aa6e-f24f773ff80c",
+      "name": "Schlange 3",
+      "headPng": "",
+      "bodyPng": "",
+      "segments": 30,
+      "speed": 90,
+      "waypoints": []
+    },
+    {
+      "id": "2170cea4-a5d6-4145-91ff-94443e25598f",
+      "name": "Schlange 4",
+      "headPng": "",
+      "bodyPng": "",
+      "segments": 30,
+      "speed": 90,
+      "waypoints": []
+    },
+    {
+      "id": "54199ec4-eccd-4dc9-bd93-c58cc7f46664",
+      "name": "Schlange 5",
+      "headPng": "C:\\Users\\schol\\Downloads\\The-Snake-Anzeige-17-3\\snake-head.png",
+      "bodyPng": "C:\\Users\\schol\\Downloads\\The-Snake-Anzeige-17-3\\snake-body.png",
+      "segments": 30,
+      "speed": 90,
+      "waypoints": []
+    }
+  ],
+  "obstacles": [
+    {
+      "id": "cde43c76-a9a2-4735-8c9b-157b6b7e266d",
+      "name": "Busch",
+      "png": "D:\\Game-Making\\The Snake Editor\\The-Snake\\desktop-editor\\Bilder\\Busch.png",
+      "x": 501,
+      "y": 693,
+      "width": 80,
+      "height": 80
+    },
+    {
+      "id": "056d0f52-468f-4e82-beb2-64de6a77c2fd",
+      "name": "Busch",
+      "png": "D:\\Game-Making\\The Snake Editor\\The-Snake\\desktop-editor\\Bilder\\Busch.png",
+      "x": 249,
+      "y": 1269,
+      "width": 80,
+      "height": 80
+    }
+  ]
+}

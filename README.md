@@ -1,1 +1,250 @@
-# snake-test
+# The Snake · Level-Test
+
+Separate Testversion für Leveldateien aus **The Snake Editor**. Die normale
+Spielversion im Repository `The-Snake` bleibt davon unberührt.
+
+## Eigenes Level testen
+
+1. Exportiere das Level im Desktop-Editor als JSON.
+2. Lade die JSON-Datei und alle verwendeten PNG-Dateien in den **Hauptordner**
+   dieses Repositories hoch.
+3. Öffne die GitHub-Pages-Testseite und wähle unten **Level-Labor**.
+4. Trage den exakten JSON-Dateinamen ein, zum Beispiel `Level_4.json`.
+5. Tippe auf **Level aus GitHub laden** und danach auf **Testlevel starten**.
+
+Alternativ lässt sich eine JSON-Datei direkt vom Gerät prüfen. Die darin
+genannten PNGs werden trotzdem aus dem GitHub-Hauptordner geladen.
+
+Windows-Pfade aus dem Editor werden automatisch auf den Dateinamen gekürzt:
+`D:\Game-Making\...\Busch.png` wird im Browser zu `Busch.png`.
+
+## Unterstützter Export
+
+- mehrere Schlangen pro Level (werden nacheinander gestartet)
+- Kopf- und Körper-PNG je Schlange
+- Segmentzahl und Geschwindigkeit
+- Wegpunkte, skaliert auf die aktuelle Arena
+- Hindernisse mit PNG, Position und Größe
+- optionale `firstHp`/`lastHp` oder `hp.first`/`hp.last`
+
+Wenn die HP-Angaben fehlen, nutzt die Testfassung vorläufig 5 bis 5.500 HP.
+Ein unvollständiger Weg endet automatisch mit einer senkrechten Strecke zur
+Gefahrenlinie, damit die Schlange nicht seitlich aus dem Spielfeld verschwindet.
+
+Testläufe vergeben keine Münzen und verändern keine Freischaltungen.
+
+## Version 18.3
+
+- Unter **Optionen → Spielfeldgröße messen** lassen sich die aktuellen Maße des aktiven Browsers auslesen.
+- Der Bericht enthält Spielfeld, gesamten Spielbereich, Layout- und sichtbaren Viewport, Bildschirm, Zoom, Pixelfaktor und Ausrichtung.
+- Die Werte können direkt kopiert und als Vorlage für eine feste Spielfeldgröße verwendet werden.
+
+## Version 18.2
+
+- Selvaras Charakterbild besitzt jetzt einen echten transparenten Hintergrund.
+- Selvara fokussiert ein sichtbares Segment, bis dessen Giftstapel voll sind.
+- Danach wechseln ihre homing Fläschchen automatisch zum nächsten sichtbaren Segment mit freien Giftstapeln.
+
+## Runden-Upgrades
+
+| Effekt | Grau | Grün | Lila |
+| --- | --- | --- | --- |
+| Schaden | +1 | +2 | +4 |
+| Feuerrate | +10 % | +20 % | +30 % |
+| Durchschlag | +1 | +2 | +3 |
+
+Jede der drei angebotenen Karten würfelt ihre Stufe unabhängig: 60 % Grau,
+25 % Grün, 10 % Lila und 5 % Orange. Innerhalb der Stufe werden verfügbare Effekte gleichmäßig
+und ohne doppelte Karten ausgewählt. Nur die Rahmenfarbe kennzeichnet die Stufe;
+Farbnamen stehen nicht auf den Karten.
+Feuerrate multipliziert die aktuelle Rate, Schaden und Durchschlag addieren sich.
+
+- Grau: +1 Mehrfachschuss fügt ein Geschoss hinzu.
+- Grün: Engerer Mehrfachschuss halbiert die aktuelle Streuung.
+- Lila: Paralleler Mehrfachschuss startet alle Geschosse nebeneinander in einer
+  horizontalen Reihe; alle fliegen geradeaus. Die Reihe bleibt im Spielfeld.
+- Streuungs-Upgrades erscheinen erst mit Mehrfachschuss und entfallen nach dem
+  parallelen Upgrade. Weitere Geschosse behalten den parallelen Modus.
+- Dauerhafte Käufe bleiben unverändert. Versionsanzeige: Multishot 3.
+
+## Lokales Roguelite
+
+- Keine Registrierung, keine Serververbindung. Fortschritt liegt im localStorage dieser Website.
+- 1 Münze pro zerstörtem Körperteil, 5 pro Upgrade-Teil; Gutschrift sofort.
+- Im Hauptmenü dauerhaft +1 Startschaden oder +10 % Basisfeuerrate kaufen.
+- Beide Verbesserungen haben 30 Stufen; Kosten: 20 × (nächste Stufe)² Münzen.
+- Runde-Upgrades verschwinden beim Neustart. Dauerhafte Käufe wirken ab der nächsten Runde.
+- Münzen, Käufe, Rekord, besiegte Teile, gestartete Runden und zuletzt gewählte Schwierigkeit werden gespeichert.
+- Eine laufende Runde wird beim Neuladen nicht fortgesetzt. Bereits verdiente Münzen bleiben erhalten.
+- Export als JSON oder Sicherungstext; Import im Hauptmenü mit Bestätigung vor dem Ersetzen.
+- Browserdaten löschen/Privatmodus kann Daten entfernen. Regelmäßig Sicherungen exportieren.
+- Bei beschädigten Daten oder Änderungen in einem anderen Tab wird nicht still überschrieben.
+- Bei Speicherfehlern Hinweis beachten und den aktuellen Fortschritt exportieren.
+
+Für die aktuelle Fassung müssen alle HTML-, CSS-, JavaScript- und Bilddateien
+gemeinsam hochgeladen werden. Tests: `node test-game.cjs`, `node test-progress.cjs`,
+`node test-skills.cjs` und `node test-alchemist.cjs`.
+
+## Neues Bewegungs- und Grafikupdate
+
+Finger aufsetzen aktiviert nur die Steuerung. Erst die relative Wischbewegung
+verschiebt den Spieler; Loslassen stoppt ihn. Die Schlange läuft zeilenweise
+von links nach rechts, dreht innerhalb der Seitenränder 52 Pixel nach unten
+und läuft zurück. Nach einer Zerstörung rücken alle Teile davor Richtung
+Schwanz zurück, bis die Lücke geschlossen ist. Der Abschnitt dahinter bleibt stehen.
+
+Die Dateien snake-head.png und snake-body.png müssen neben game.js liegen.
+Beide wurden mit der integrierten Bildgenerierung erstellt: grüner Schlangenkopf
+nach rechts mit goldenen Augen sowie rundes grünes Schuppen-Körpersegment,
+handgemalter Arcade-Stil, transparenter Hintergrund, ohne Text.
+
+Technische Tests: node test-game.cjs
+
+Ein mobiles Browser-Arcade-Spiel: Eine segmentierte Schlange bewegt sich in Schlangenlinien von oben nach unten. Der Spieler steuert seine automatisch feuernde Waffe am unteren Bildschirmrand durch Halten und seitliches Wischen.
+
+## Spielregeln
+
+- Jede Schlange hat 100 Körperteile plus den separaten Kopf, auch in Folgewellen.
+
+- Vor dem Start wird zwischen Leicht, Normal und Schwer gewählt.
+- Das erste Körperteil hat 5 HP. Jedes folgende erhält prozentual mehr: Leicht +10 %, Normal +15 %, Schwer +20 %. Formel: runden(5 × (1 + Rate)^Index); erst am Ende runden. Auf Leicht: 5, 6, 6, 7, 7. Upgrade-Teile haben dieselbe HP-Kurve.
+- Über jedem Körperteil stehen seine verbleibenden HP als Zahl; der Kopf hat weiterhin keine eigenen HP.
+- Die Trefferbereiche der Körperteile sind größer als ihre sichtbare Darstellung, damit das Zielen auf dem Handy zuverlässiger ist.
+- Der Kopf ist separat sichtbar und besitzt keine eigenen Lebenspunkte. Kopftreffer beschädigen das erste Körperteil direkt dahinter.
+- Sobald alle Körperteile zerstört sind, ist die Schlange besiegt.
+- Die Schlange bewegt sich langsam in engen, kurzen Schlangenlinien nach unten.
+- Das zweite Körperteil nach dem Kopf ist das erste Upgrade-Segment.
+- Danach erscheint alle fünf Segmente ein weiteres Upgrade-Segment.
+- Wird ein Segment zerstört, rücken alle Teile davor einschließlich Kopf um einen Segmentabstand auf der Bahn zurück. Die Teile Richtung Schwanz bleiben an ihrer Position.
+- Beim Zerstören eines Upgrade-Segments hält das Spiel vollständig an.
+- Upgrades verbessern Schaden, Feuerrate, Geschossanzahl oder Durchschlag.
+
+## Starten
+
+`index.html` im Browser öffnen oder das Repository über GitHub Pages veröffentlichen.
+
+## Spielerplattform (Version Plattform 6)
+
+Anime-Pilot mit Pistole auf einer Metallplattform. Die mittlere Plattform ist
+32 Pixel breit; links und rechts sind Andockplätze bei -36/+36 Pixeln vorgesehen.
+16 Pixel Randabstand halten nur die mittlere Plattform im Bild. Seitliche
+Begleiter dürfen über den Rand ragen, damit die Schlange außen erreichbar bleibt.
+Aktuell sind nur der Pilot und zwei kleine Anschlussstücke sichtbar.
+Die Geschosse starten an der Pistolenmündung; Drag-Steuerung bleibt relativ.
+Neue Grafik: player-platform.png muss neben index.html hochgeladen werden.
+
+Plattform 6: Spieler auf 32 × 61 Pixel verkleinert. Pistolenmündung und
+Geschossstart liegen 14 Pixel unter der unteren Linie; auch nahe Körperteile
+liegen dadurch vor dem Geschoss und können getroffen werden.
+
+## Layout 7
+
+Grid-Spalten und Menü dürfen unter ihre Inhaltsbreite schrumpfen. Canvas liegt
+absolut im Spielfeld und erhält nur seine Bitmap-Auflösung aus JavaScript;
+CSS bestimmt dauerhaft die sichtbare Größe. So vergrößern Canvas, Punktestand
+und Menütexte nicht das Spielfeld bei Rückkehr ins Hauptmenü.
+
+## Kritische Treffer (Krit 8)
+
+Start pro Runde: 0 % Krit-Chance, Krit-Schaden 150 % des normalen Schadens.
+Chance-Upgrades: +2,5 / +5 / +7,5 Prozentpunkte (grau/grün/lila), maximal 100 %.
+Krit-Schaden: +15 / +30 / +50 Prozentpunkte, z. B. 150 → 165 %.
+Jeder neue gültige Segmenttreffer würfelt unabhängig, auch mit Durchschlag.
+Kopftreffer leiten diesen Schaden an das erste Körperteil weiter, ohne Doppelhit.
+Bruchteile beim Schaden bleiben erhalten; HP-Anzeige rundet weiterhin auf.
+Kritische Treffer erzeugen orange Trefferpartikel. Aktuelle Krit-Werte stehen
+unter den Hauptwerten. Chance-Karten entfallen bei 100 %, Krit-Schaden bleibt.
+Die Seltenheitschancen 65/25/10 bleiben unverändert.
+
+## Hauptmenü (Menü 9)
+
+Helle Fantasy-Hauskulisse mit goldenem The-Snake-Titel, aktuellem Münzstand,
+grünem Spielknopf und drei bedienbaren Navigationspunkten: Upgrades, Hauptmenü,
+Optionen. Schwierigkeit bleibt auf der Startseite, permanente Käufe im
+Upgrade-Bereich, vorhandener Export/Import unter Optionen. Nach einer Runde
+führt Hauptmenü zurück zur Hausansicht. Keine zusätzlichen Währungen oder Konten.
+
+Neue Datei menu-background.png muss mit index.html, style.css und game.js
+hochgeladen werden. Hintergrund mit integrierter Bildgenerierung erstellt:
+„Vertical 9:16 bright painted fantasy cottage, blue slate roof, warm windows,
+flower garden, stone path, distant castle and waterfalls; open sky for title,
+darker foreground for controls; no text, logos or UI.“
+
+## Arena 10
+
+Spieloberfläche im Fantasy-Stil: Steinmauern und Laternen als Hintergrund,
+goldene Rahmen, dunkelblaue Wertanzeigen mit Krone/Schwert/Pfeilen und eine
+kompakte Krit-Leiste. Das Canvas zeigt einen blauen Verlauf, ein deutlicheres
+Raster und die rote Verteidigungslinie. Spielfeldhöhe passt in den verfügbaren
+Bildschirm; Spielmechanik und lokale Fortschrittsdaten bleiben erhalten.
+
+Upload: index.html, style.css, game.js sowie neue arena-background.png.
+Bildmotiv mit integrierter Bildgenerierung erstellt: „Vertical fantasy stone
+arena, ivy and amber lanterns at perimeter, blue banners, distant waterfall,
+empty navy centre, gold trim; no text, characters, snakes, bullets or UI.“
+
+## Helden 11
+
+Helden-Menü mit aktivem Schützen und zwei leeren Andockplätzen vorbereitet.
+Noch keine Heldenrekrutierung oder Ausrüstung. Orange Rahmen und Zielverteilung
+60/25/10/5 sind vorbereitet. Da orange Effekte noch nicht festgelegt wurden,
+bleiben aktive Runden-Angebote vorerst bei 65/25/10. Erst mit mindestens drei
+orangen Karten wird die neue Verteilung aktiviert (drei eindeutige Angebote).
+
+## Paladin 12 – aktueller Stand
+
+Aldric ist für 100 Münzen dauerhaft freischaltbar und links/rechts ausrüstbar.
+Alle vereinbarten Paladin-Karten, Licht-Hammer, Flächentreffer und Göttliches
+Urteil sind implementiert. Frühere Hinweise auf nur vorbereitete Helden/Orange
+sind damit überholt. Regeln, Anfangswerte und Installation: [PALADIN.md](PALADIN.md).
+
+## Arena 12.2
+
+Dekorative Außenabstände oben um 30 und unten um 50 CSS-Pixel reduziert.
+Sicherheitsabstände des Geräts begrenzen die Erweiterung, wenn weniger Platz
+vorhanden ist. Bei kleinen Displays bleiben mindestens 4 Pixel Rand.
+Canvas und Spielerposition passen sich über den bestehenden ResizeObserver an.
+Nur index.html und style.css müssen ersetzt werden.
+
+## Upgrades 13
+
+Dauerhafte Krit-Chance (+1 Prozentpunkt pro Kauf) und Krit-Schaden
+(+25 Prozentpunkte pro Kauf) im Hauptmenü. Wie die bestehenden Käufe je 30
+Stufen, Kosten 20 × nächste Stufe². Wirkung ab nächster Runde für Schützen und
+Aldric. Alte Spielstände erhalten Stufe 0; Export/Import enthält die neuen Werte.
+Ersetzen: index.html, game.js, progress.js.
+
+## Plattformschüsse 13.1
+
+Pistole und Paladin-Hämmer starten nun am Mittelpunkt ihrer jeweiligen Plattform
+(Spieler-Y + 28) statt an der Mündung (Spieler-Y - 20). Die Sprites bleiben an
+bisheriger Position. Paralleler Mehrfachschuss bleibt nebeneinander angeordnet.
+Gezielte Tests prüfen Treffer nahe der unteren Verlustgrenze für den Schützen
+sowie Aldric links und rechts. Ersetzen: index.html, game.js, paladin.js.
+
+## Version 17.0 – Permanente Helden-Skills
+
+Im Heldenmenü gibt es für Schütze, Aldric und Vaelric je einen Skills-Button.
+Angriffe und Upgrade-Skills sind getrennt, Seltenheiten werden angezeigt.
+Einmalige Aufwertungen kosten jeweils 50 Münzen und gelten ab dem nächsten Run.
+Die vollständige Liste und Upload-Anleitung stehen in [SKILLS.md](SKILLS.md).
+Neu erforderlich: **skills.js**; es wird vor progress.js geladen.
+
+## Version 18.0 – Selvara
+
+Selvara, die Meisterin der toxischen Essenzen, ist als dritter freischaltbarer
+Begleitheld vollständig eingebaut. Sie besitzt ein eigenes Frontbild, zielsuchende
+Seuchenfläschchen, unabhängige Giftstapel, Giftübertragung, Giftwolken,
+Meisterexperiment sowie die vereinbarten lila und orangen Build-Fähigkeiten.
+Heldenauswahl, Plattformwechsel, HUD, lokaler Spielstand und dauerhafte
+50-Münzen-Skills unterstützen Selvara. Details: [SELVARA.md](SELVARA.md).
+
+## Version 18.1 – Tablet- und Laptop-Ansicht
+
+Ab 760 Pixel Fensterbreite steht das Spielfeld mittig zwischen zwei ausführlichen
+Heldenkarten. Jede ausgerüstete Seitenplattform zeigt dort alle aktuellen
+Kampf- und Klassenwerte, gewählte Run-Upgrades einschließlich Seltenheit und
+Auswahlanzahl sowie die dauerhaft für 50 Münzen aufgewerteten Skills. Auf dem
+Handy bleibt das bisherige kompakte HUD erhalten. Am PC bewegt man die komplette
+Plattformgruppe zusätzlich mit den Pfeiltasten oder mit A/D; Touch-Wischen bleibt
+unverändert verfügbar.
