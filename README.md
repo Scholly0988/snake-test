@@ -33,6 +33,13 @@ Gefahrenlinie, damit die Schlange nicht seitlich aus dem Spielfeld verschwindet.
 
 Testläufe vergeben keine Münzen und verändern keine Freischaltungen.
 
+## Version 19.0 – Kaelvar im Level-Labor
+
+Kaelvar ist vollständig aus dem Hauptspiel übernommen. Eigene Testlevel können
+mit Runenkanone, Runenbruch, Runenschlag, Runenkreis und allen Kaelvar-Upgrades
+gespielt werden. Hindernisse blockieren auch seine direkten Runenprojektile.
+Details: [KAELVAR.md](KAELVAR.md).
+
 ## Version 18.6 – Level-Schwierigkeiten
 
 - Unterstützt das Editorformat 2 mit getrennten Bereichen `easy`, `normal`
