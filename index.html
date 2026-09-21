@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#07131b">
   <title>The Snake · Level-Test</title>
-  <link rel="stylesheet" href="style.css?v=level-labor-18-4">
+  <link rel="stylesheet" href="style.css?v=level-difficulties-18-6">
 </head>
 <body>
   <main class="game-shell">
@@ -111,8 +111,13 @@
           <p class="eyebrow">TEST-REPOSITORY</p><h2>Level-Labor</h2>
           <p>Hier kannst du Leveldateien aus <strong>The Snake Editor</strong> testen. Die in der JSON genannten PNG-Dateien werden aus dem Hauptordner dieses GitHub-Repositories geladen.</p>
           <div class="test-warning">Diese Testläufe vergeben keine Münzen und verändern keine Level-Freischaltungen.</div>
+          <fieldset class="difficulty-picker custom-difficulty-picker"><legend>Test-Schwierigkeit</legend>
+            <label><input type="radio" name="customDifficulty" value="0.10" checked><span>Leicht<small>easy</small></span></label>
+            <label><input type="radio" name="customDifficulty" value="0.15"><span>Mittel<small>normal</small></span></label>
+            <label><input type="radio" name="customDifficulty" value="0.20"><span>Schwer<small>hard</small></span></label>
+          </fieldset>
           <label for="repositoryLevelName"><strong>JSON im GitHub-Hauptordner</strong></label>
-          <input id="repositoryLevelName" type="text" value="Level_4.json" inputmode="text" autocomplete="off" spellcheck="false">
+          <input id="repositoryLevelName" type="text" value="Level 1.json" inputmode="text" autocomplete="off" spellcheck="false">
           <button id="loadRepositoryLevel">Level aus GitHub laden</button>
           <div class="level-divider"><span>oder direkt vom Gerät</span></div>
           <label class="level-file-label">JSON-Datei auswählen
@@ -134,7 +139,7 @@
           <button id="navOptions" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 4 4 1 1 6-4 2-1 5h-6l-2-4-5-1V9l4-2z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg><span>Optionen</span></button>
           <button id="navLevelLab" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5l-5 9a3 3 0 0 0 3 4h8a3 3 0 0 0 3-4l-5-9V3M8 15h8"/></svg><span>Level-Labor</span></button>
         </nav>
-        <p class="menu-version">TESTVERSION · Level-Labor 18.4</p>
+        <p class="menu-version">TESTVERSION · Schwierigkeiten 18.6</p>
       </div>
 
       <div id="upgradeScreen" class="overlay hidden">
@@ -175,7 +180,7 @@
   <script src="paladin.js?v=desktop-18-1"></script>
   <script src="necromancer.js?v=desktop-18-1"></script>
   <script src="alchemist.js?v=poison-focus-18-2"></script>
-  <script src="custom-level.js?v=level-labor-18-4"></script>
-  <script src="game.js?v=level-labor-18-4"></script>
+  <script src="custom-level.js?v=level-difficulties-18-6"></script>
+  <script src="game.js?v=level-difficulties-18-6"></script>
 </body>
 </html>

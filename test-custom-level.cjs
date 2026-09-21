@@ -37,4 +37,19 @@ assert.throws(()=>context.levelLoader.parse('{kaputt'),/gültiges JSON/);
 assert.throws(()=>context.levelLoader.validate({format:'wrong',version:1}),/unterstütztes/);
 assert.throws(()=>context.levelLoader.validate({format:'the-snake-level',version:1,width:1000,height:2200,snakes:[],obstacles:[]}),/1 bis 50/);
 
-console.log('PASS: editor Level_4 format, Windows PNG paths, HP fallback and validation');
+const version2=context.levelLoader.parse(fs.readFileSync('Level 1.json','utf8'));
+assert.equal(version2.version,2);
+assert.deepEqual(Object.keys(version2.difficulties),['easy','normal','hard']);
+const easy=context.levelLoader.selectDifficulty(version2,.10);
+const normal=context.levelLoader.selectDifficulty(version2,.15);
+const hard=context.levelLoader.selectDifficulty(version2,.20);
+assert.equal(easy.snakes[0].waypoints.length,56);
+assert.equal(normal.snakes[0].waypoints.length,59);
+assert.equal(hard.snakes[0].waypoints.length,67);
+assert.equal(easy.obstacles.length,2);
+assert.equal(normal.obstacles.length,3);
+assert.equal(hard.obstacles.length,5);
+assert.equal(hard.obstacles[0].png,'Busch.png');
+assert.equal(context.levelLoader.selectDifficulty(version2,'hard').difficultyKey,'hard');
+
+console.log('PASS: editor formats 1/2, three difficulties, Windows PNG paths, HP fallback and validation');

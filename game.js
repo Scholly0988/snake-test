@@ -372,6 +372,7 @@ function update(dt) {
       bullet.y += bullet.vy * dt;
     }
   }
+  blockProjectilesAtObstacles();
   handleHits();
   for(const bullet of state.bullets)if(bullet.returnAfterHits){bullet.hammerPhase="return";bullet.returnAfterHits=false;}
   state.bullets = state.bullets.filter(b => b.y > -25 && !b.dead);
@@ -415,6 +416,36 @@ function projectileHits(bullet, target) {
   const t = dx*dx+dy*dy ? Math.max(0,Math.min(1,((target.x-ax)*dx+(target.y-ay)*dy)/(dx*dx+dy*dy))) : 0;
   const radius = SEGMENT_HIT_RADIUS + (bullet.owner === "paladin" ? 2 * (bullet.size || 1.4) : 0);
   return Math.hypot(target.x-ax-t*dx,target.y-ay-t*dy) < radius;
+}
+function projectileObstacleHit(bullet,obstacle) {
+  const radius=bullet.owner==="paladin"?Math.max(4,6*(bullet.size||1.4)):bullet.owner==="alchemist"?5:bullet.owner==="necromancer"?4:3;
+  const left=obstacle.x-obstacle.width/2-radius,right=obstacle.x+obstacle.width/2+radius;
+  const top=obstacle.y-obstacle.height/2-radius,bottom=obstacle.y+obstacle.height/2+radius;
+  const ax=bullet.previousX??bullet.x,ay=bullet.previousY??bullet.y;
+  const dx=bullet.x-ax,dy=bullet.y-ay;
+  let near=0,far=1;
+  for(const [start,delta,min,max] of [[ax,dx,left,right],[ay,dy,top,bottom]]){
+    if(Math.abs(delta)<1e-9){if(start<min||start>max)return null;continue;}
+    let enter=(min-start)/delta,exit=(max-start)/delta;
+    if(enter>exit)[enter,exit]=[exit,enter];
+    near=Math.max(near,enter);far=Math.min(far,exit);
+    if(near>far)return null;
+  }
+  return {x:ax+dx*near,y:ay+dy*near,t:near};
+}
+function blockProjectilesAtObstacles() {
+  if(!state.isCustomRun||!state.customObstacles.length)return;
+  for(const bullet of state.bullets){
+    if(bullet.dead)continue;
+    let first=null;
+    for(const obstacle of state.customObstacles){
+      const hit=projectileObstacleHit(bullet,obstacle);
+      if(hit&&(!first||hit.t<first.t))first=hit;
+    }
+    if(!first)continue;
+    bullet.dead=true;bullet.x=first.x;bullet.y=first.y;
+    burst(first.x,first.y,"#d6c091",5);
+  }
 }
 function segmentDamageMultiplier(segment) {
   return segment.soulMark ? 1 + (state.necromancer?.curse || 0) : 1;
@@ -470,9 +501,11 @@ function destroySegment(index, offerUpgrade = true) {
   if (state.necromancer) state.necroDeaths.push({segment:destroyed,neighbors});
   if (state.alchemist) resolveAlchemistDeath(destroyed,neighbors);
   state.score += destroyed.upgrade ? 100 : 25;
-  const coins = (destroyed.upgrade ? 5 : 1) * state.level * difficultyMultiplier(state.runDifficulty??.10);
-  state.runCoins += coins;
-  progress.reward(coins, state.score);
+  if(!state.isCustomRun){
+    const coins = (destroyed.upgrade ? 5 : 1) * state.level * difficultyMultiplier(state.runDifficulty??.10);
+    state.runCoins += coins;
+    progress.reward(coins, state.score);
+  }
   document.querySelector("#saveStatus").textContent = progress.message + " · Touch: Wischen · PC: ← → oder A/D";
   burst(destroyed.x, destroyed.y, destroyed.upgrade ? "#ffe083" : "#75ffac", 16);
 
@@ -679,23 +712,29 @@ for (const page of ["Home", "Upgrades", "Heroes", "Options", "LevelLab"]) {
   });
 }
 
-let loadedCustomLevel=null;
+let loadedCustomLevel=null,loadedCustomLevelSource="";
+function selectedCustomLevel(level=loadedCustomLevel) {
+  return level?SnakeCustomLevel.selectDifficulty(level,progress.data.difficulty):null;
+}
 function showCustomLevel(level,source) {
-  loadedCustomLevel=level;
-  const segments=level.snakes.reduce((sum,snake)=>sum+snake.segments,0);
-  const waypointCount=level.snakes.reduce((sum,snake)=>sum+snake.waypoints.length,0);
+  loadedCustomLevel=level;loadedCustomLevelSource=source;
+  const selected=selectedCustomLevel(level);
+  const labels={easy:"Leicht",normal:"Mittel",hard:"Schwer"};
+  const segments=selected.snakes.reduce((sum,snake)=>sum+snake.segments,0);
+  const waypointCount=selected.snakes.reduce((sum,snake)=>sum+snake.waypoints.length,0);
   const pngs=new Set();
-  for(const snake of level.snakes){pngs.add(snake.headPng);pngs.add(snake.bodyPng);}
-  for(const obstacle of level.obstacles)if(obstacle.png)pngs.add(obstacle.png);
+  for(const snake of selected.snakes){pngs.add(snake.headPng);pngs.add(snake.bodyPng);}
+  for(const obstacle of selected.obstacles)if(obstacle.png)pngs.add(obstacle.png);
   const summary=document.querySelector("#customLevelSummary");
   summary.className="custom-level-summary ready";
-  summary.innerHTML="<strong></strong><span></span><span></span><span></span><span></span>";
+  summary.innerHTML="<strong></strong><span></span><span></span><span></span><span></span><span></span>";
   const rows=summary.querySelectorAll("span");
   summary.querySelector("strong").textContent=level.name;
-  rows[0].textContent=level.snakes.length+" Schlangen · "+segments+" Segmente · "+waypointCount+" Wegpunkte";
-  rows[1].textContent=level.obstacles.length+" Hindernisse · Spielfeld "+level.width+" × "+level.height;
-  rows[2].textContent="HP "+level.firstHp.toLocaleString("de-DE")+"–"+level.lastHp.toLocaleString("de-DE")+(level.hpFallback?" (Fallback, da im Export noch keine HP stehen)":"");
-  rows[3].textContent="Quelle: "+source+" · PNGs: "+Array.from(pngs).join(", ");
+  rows[0].textContent="Aktiv: "+labels[selected.difficultyKey]+" · "+selected.snakes.length+" Schlangen · "+segments+" Segmente · "+waypointCount+" Wegpunkte";
+  rows[1].textContent=selected.obstacles.length+" Hindernisse · Spielfeld "+level.width+" × "+level.height;
+  rows[2].textContent="HP "+selected.firstHp.toLocaleString("de-DE")+"–"+selected.lastHp.toLocaleString("de-DE")+(selected.hpFallback?" (Fallback, da im Export noch keine HP stehen)":"");
+  rows[3].textContent=level.version===2?"Format 2: Leicht, Mittel und Schwer besitzen eigene Wege und Hindernisse.":"Format 1: Für alle Schwierigkeiten wird derselbe Levelaufbau verwendet.";
+  rows[4].textContent="Quelle: "+source+" · PNGs: "+Array.from(pngs).join(", ");
   document.querySelector("#startCustomLevel").disabled=false;
 }
 function showCustomLevelError(error) {
@@ -725,7 +764,7 @@ document.querySelector("#loadRepositoryLevel").addEventListener("click",loadRepo
 document.querySelector("#loadLocalLevel").addEventListener("click",loadLocalCustomLevel);
 document.querySelector("#startCustomLevel").addEventListener("click",()=>{
   if(state.mode!=="start"||!loadedCustomLevel)return;
-  state.customLevel=loadedCustomLevel;state.isCustomRun=true;startGame();
+  state.customLevel=selectedCustomLevel();state.isCustomRun=true;startGame();
 });
 try{
   const saved=localStorage.getItem("the-snake.test-level-file");
@@ -735,12 +774,25 @@ try{
 for (const value of [.10,.15,.20]) {
   document.querySelector('input[name="difficulty"][value="'+value.toFixed(2)+'"]').addEventListener("change",()=>{
     if(state.mode!=="start")return;
-    progress.data.difficulty=value;progress.save();renderLevelPicker();
+    progress.data.difficulty=value;progress.save();syncDifficultyRadios();renderLevelPicker();
+    if(loadedCustomLevel)showCustomLevel(loadedCustomLevel,loadedCustomLevelSource);
   });
 }
+for (const value of [.10,.15,.20]) {
+  document.querySelector('input[name="customDifficulty"][value="'+value.toFixed(2)+'"]').addEventListener("change",()=>{
+    if(state.mode!=="start")return;
+    progress.data.difficulty=value;progress.save();syncDifficultyRadios();renderLevelPicker();
+    if(loadedCustomLevel)showCustomLevel(loadedCustomLevel,loadedCustomLevelSource);
+  });
+}
+function syncDifficultyRadios() {
+  for(const name of ["difficulty","customDifficulty"]){
+    const radio=document.querySelector('input[name="'+name+'"][value="'+progress.data.difficulty.toFixed(2)+'"]');
+    if(radio)radio.checked=true;
+  }
+}
 function restoreDifficulty() {
-  const radio = document.querySelector('input[name="difficulty"][value="' + progress.data.difficulty.toFixed(2) + '"]');
-  if (radio) radio.checked = true;
+  syncDifficultyRadios();
 }
 
 document.querySelector("#unlockPaladin").addEventListener("click",()=>{
@@ -1094,7 +1146,7 @@ function reportGameError(error) {
   state.errorResumeMode=state.mode;
   state.mode="error";
   state.pointerDown=false;state.pointerId=null;
-  const details="Testversion 18.4 · "+(state.isCustomRun?(state.customLevel?.name||"Eigenes Level"):("Level "+state.level))+" · Upgrade: "+(state.lastUpgrade||"keines")+
+  const details="Testversion 18.6 · "+(state.isCustomRun?(state.customLevel?.name||"Eigenes Level"):("Level "+state.level))+" · Upgrade: "+(state.lastUpgrade||"keines")+
     "\n"+String(error?.message||error)+"\n"+String(error?.stack||"").slice(0,2500);
   state.lastError=details;
   document.querySelector("#gameErrorDetails").textContent=details;

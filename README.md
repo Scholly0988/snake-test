@@ -33,6 +33,30 @@ Gefahrenlinie, damit die Schlange nicht seitlich aus dem Spielfeld verschwindet.
 
 Testläufe vergeben keine Münzen und verändern keine Freischaltungen.
 
+## Version 18.6 – Level-Schwierigkeiten
+
+- Unterstützt das Editorformat 2 mit getrennten Bereichen `easy`, `normal`
+  und `hard`.
+- Leicht, Mittel und Schwer können jeweils eigene Schlangenwege,
+  Segmentzahlen, Geschwindigkeiten und Hindernisse besitzen.
+- Die Schwierigkeit lässt sich direkt im Level-Labor wählen. Die Vorschau zeigt
+  sofort die Werte der ausgewählten Variante.
+- Format-1-Level bleiben kompatibel und verwenden ihren Aufbau für alle drei
+  Schwierigkeitsgrade.
+- Die bisherigen HP-Faktoren bleiben aktiv: Leicht 1×, Mittel 1,5× und Schwer
+  2×, sofern der Editorexport keine abweichenden HP-Grundwerte festlegt.
+
+## Version 18.5 – blockierende Hindernisse
+
+- Die im Level platzierten Hindernisse blockieren alle direkten Geschosse in
+  ihrer vollständigen, im JSON angegebenen Breite und Höhe.
+- Auch sehr schnelle Projektile werden entlang ihrer Bewegung zwischen zwei
+  Bildern geprüft und können nicht durch ein Hindernis springen.
+- Ein blockierter Schuss verschwindet am Rand des Hindernisses. Seelen und
+  bereits ausgelöste Flächeneffekte gelten nicht als direkte Schüsse.
+- Testläufe schreiben auch für zerstörte Segmente keine Münzen in den normalen
+  Spielstand.
+
 ## Version 18.3
 
 - Unter **Optionen → Spielfeldgröße messen** lassen sich die aktuellen Maße des aktiven Browsers auslesen.

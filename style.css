@@ -381,6 +381,8 @@ button:disabled { opacity:.5; cursor:default; }
 
 /* Test repository: editor level importer. */
 .level-lab label { display:block; margin-top:14px; color:#ffe1a1; font-size:12px; }
+.level-lab .custom-difficulty-picker { margin:14px 0 8px; padding:7px; border:1px solid #b89555; border-radius:10px; background:#071a28cc; }
+.level-lab .custom-difficulty-picker label { margin-top:0; }
 .level-lab input[type=text] {
   width:100%; min-height:44px; margin-top:7px; padding:9px 10px;
   border:1px solid #b89555; border-radius:8px; background:#041522; color:#f3fbff;

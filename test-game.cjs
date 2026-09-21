@@ -147,6 +147,21 @@ run('state.mode="playing"; createSnake(1); state.snake[0].x=195; state.snake[0].
 assert.equal(run('state.snake[0].hp'),4,'Shot damages body at lower line');
 console.log('PASS: projectile below line and damage to low segments');
 
+run('state.isCustomRun=true; state.customObstacles=[{x:100,y:100,width:80,height:40}]; state.particles=[]; state.bullets=[{x:100,y:50,previousX:100,previousY:160,dead:false}]');
+run('blockProjectilesAtObstacles()');
+assert.equal(run('state.bullets[0].dead'),true,'Fast projectile crossing the obstacle must be blocked');
+assert(run('state.bullets[0].y')>=77&&run('state.bullets[0].y')<=123,'Projectile stops at expanded obstacle boundary');
+run('state.bullets=[{x:150,y:50,previousX:150,previousY:160,dead:false}]; blockProjectilesAtObstacles()');
+assert.equal(run('state.bullets[0].dead'),false,'Projectile outside obstacle width must continue');
+run('state.isCustomRun=false; state.bullets=[{x:100,y:50,previousX:100,previousY:160,dead:false}]; blockProjectilesAtObstacles()');
+assert.equal(run('state.bullets[0].dead'),false,'Normal levels without custom obstacles stay unchanged');
+console.log('PASS: custom obstacle bounds block swept projectiles without tunnelling');
+const customCoinsBefore=run('progress.data.coins');
+run('state.isCustomRun=true; state.necromancer=null; state.alchemist=null; state.paladin=null; state.snake=[{id:777001,x:100,y:100,hp:1,maxHp:1,upgrade:false,pathOffset:30}]; destroySegment(0,false)');
+assert.equal(run('progress.data.coins'),customCoinsBefore,'Custom test kills must not alter normal coins');
+run('state.isCustomRun=false');
+console.log('PASS: custom test segment rewards do not alter saved progress');
+
 run('resetGame(); state.weapon.damage=10');
 assert.equal(run('rollHit(()=>0).critical'),false);
 for (const [tier,chance,bonus] of [['grey',2.5,15],['green',5,30],['purple',7.5,50]]) {

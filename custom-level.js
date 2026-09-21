@@ -36,14 +36,9 @@ const SnakeCustomLevel = (() => {
     };
   }
 
-  function validate(raw) {
-    if (!raw || raw.format !== "the-snake-level" || raw.version !== 1)
-      throw new Error("Die Datei ist kein unterstütztes The-Snake-Level (Format 1).");
-    const width = finite(raw.width, "Levelbreite", 100, 10000);
-    const height = finite(raw.height, "Levelhöhe", 200, 30000);
-    if (!Array.isArray(raw.snakes) || !raw.snakes.length || raw.snakes.length > 50)
-      throw new Error("Das Level muss 1 bis 50 Schlangen enthalten.");
-
+  function validateDifficultySet(raw, width, height, hpSource, label) {
+    if (!raw || !Array.isArray(raw.snakes) || !raw.snakes.length || raw.snakes.length > 50)
+      throw new Error(label + " muss 1 bis 50 Schlangen enthalten.");
     const snakes = raw.snakes.map((snake, index) => {
       if (!snake || typeof snake !== "object") throw new Error("Schlange " + (index + 1) + " ist ungültig.");
       const waypoints = Array.isArray(snake.waypoints)
@@ -73,20 +68,45 @@ const SnakeCustomLevel = (() => {
       };
     });
 
-    const firstHp = integer(raw.firstHp ?? raw.hp?.first ?? 5, "Erste Segment-HP", 1, 1000000000);
-    const lastHp = integer(raw.lastHp ?? raw.hp?.last ?? 5500, "Letzte Segment-HP", firstHp, 1000000000);
+    const firstHp = integer(raw.firstHp ?? raw.hp?.first ?? hpSource.firstHp ?? hpSource.hp?.first ?? 5, "Erste Segment-HP", 1, 1000000000);
+    const lastHp = integer(raw.lastHp ?? raw.hp?.last ?? hpSource.lastHp ?? hpSource.hp?.last ?? 5500, "Letzte Segment-HP", firstHp, 1000000000);
     return {
-      format: raw.format,
-      version: 1,
-      name: String(raw.name || "Eigenes Level").slice(0, 100),
-      width,
-      height,
       firstHp,
       lastHp,
-      hpFallback: raw.firstHp == null && raw.lastHp == null && raw.hp == null,
+      hpFallback: raw.firstHp == null && raw.lastHp == null && raw.hp == null && hpSource.firstHp == null && hpSource.lastHp == null && hpSource.hp == null,
       snakes,
       obstacles
     };
+  }
+
+  function validate(raw) {
+    if (!raw || raw.format !== "the-snake-level" || ![1,2].includes(raw.version))
+      throw new Error("Die Datei ist kein unterstütztes The-Snake-Level (Format 1 oder 2).");
+    const width = finite(raw.width, "Levelbreite", 100, 10000);
+    const height = finite(raw.height, "Levelhöhe", 200, 30000);
+    const name = String(raw.name || "Eigenes Level").slice(0, 100);
+    if(raw.version===1){
+      const set=validateDifficultySet(raw,width,height,raw,"Das Level");
+      return {format:raw.format,version:1,name,width,height,...set,difficulties:null};
+    }
+    if(!raw.difficulties||typeof raw.difficulties!=="object")throw new Error("Format 2 benötigt die Schwierigkeiten easy, normal und hard.");
+    const difficulties={};
+    for(const [key,label] of [["easy","Leicht"],["normal","Mittel"],["hard","Schwer"]]){
+      difficulties[key]=validateDifficultySet(raw.difficulties[key],width,height,raw,label);
+    }
+    return {format:raw.format,version:2,name,width,height,difficulties};
+  }
+
+  function difficultyKey(value) {
+    if(value==="hard"||value===.20||value===0.20)return "hard";
+    if(value==="normal"||value===.15||value===0.15)return "normal";
+    return "easy";
+  }
+
+  function selectDifficulty(level,value) {
+    const key=difficultyKey(value);
+    if(level.version===1||!level.difficulties)return {...level,difficultyKey:key};
+    return {...level,...level.difficulties[key],difficultyKey:key};
   }
 
   function parse(text) {
@@ -114,5 +134,5 @@ const SnakeCustomLevel = (() => {
     return {level: parse(text), filename: safeName};
   }
 
-  return {validate, parse, fromFile, fromRepository, assetName};
+  return {validate, parse, fromFile, fromRepository, assetName, difficultyKey, selectDifficulty};
 })();
