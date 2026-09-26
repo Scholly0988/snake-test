@@ -1,6 +1,6 @@
 # The Snake
 
-## Version 23.1 Test – Halloween-Hauptmenü
+## Version 23.2 Test – Halloween-Arena
 
 - Eigenes vertikales Halloween-Hintergrundmotiv mit Vollmond, Schlangenschatten,
   Schloss, Nebel, Laternen und Kürbissen.
@@ -12,6 +12,13 @@
 - Unter Optionen kann das saisonale Design auf `Automatisch`, `Immer aktiv`
   oder `Deaktiviert` gestellt werden. Die Auswahl wird lokal gespeichert.
 - Neues optimiertes Asset: `halloween-menu-background.webp`.
+- Die Kampfrunde verwendet im Halloween-Modus einen eigenen mondbeschienenen
+  Friedhofs- und Schlosshintergrund mit violett-orangefarbenem HUD-Rahmen.
+- Schlangenkopf und Körpersegmente wechseln saisonal auf neue violett-schwarze
+  Drachenschuppen-Sprites mit orange glühenden Augen und Rissen. Außerhalb des
+  Halloween-Modus bleiben die bisherigen grünen Grafiken aktiv.
+- Neue Kampf-Assets: `halloween-arena-background.webp`,
+  `halloween-snake-head.png` und `halloween-snake-body.png`.
 
 ## Version 23.0 – Seraphine
 

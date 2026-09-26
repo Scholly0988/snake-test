@@ -209,11 +209,15 @@ assert.equal(run('isHalloweenSeason(new Date(2026,10,2,23,59))'),true);
 assert.equal(run('isHalloweenSeason(new Date(2026,10,3,0,0))'),false);
 assert(run('setHalloweenThemeMode("on",new Date(2026,5,1))'));
 assert.equal(run('halloweenThemeActive(new Date(2026,5,1))'),true);
+assert.equal(run('headSprite.src'),'halloween-snake-head.png');
+assert.equal(run('bodySprite.src'),'halloween-snake-body.png');
 assert(run('setHalloweenThemeMode("off",new Date(2026,9,31))'));
 assert.equal(run('halloweenThemeActive(new Date(2026,9,31))'),false);
+assert.equal(run('headSprite.src'),'snake-head.png');
+assert.equal(run('bodySprite.src'),'snake-body.png');
 assert(run('setHalloweenThemeMode("auto",new Date(2026,9,31))'));
 assert.equal(run('halloweenThemeActive(new Date(2026,9,31))'),true);
-console.log('PASS: Halloween theme uses local device date and supports auto, on and off modes');
+console.log('PASS: Halloween theme uses local date, mode overrides and seasonal snake sprites');
 
 context.window.innerWidth=390;context.window.innerHeight=844;context.window.visualViewport={width:390,height:760,scale:1};context.window.screen={width:390,height:844};
 assert.match(run('viewportMeasurementText()'),/Spielfeld: 390 × 700 CSS-Pixel/);
