@@ -171,6 +171,7 @@ button:active { transform: scale(.98); }
 .upgrade-choice.rarity-green { background: #173b4d; border: 2px solid #65dc94; }
 .upgrade-choice.rarity-purple { background: #173b4d; border: 2px solid #c990ff; }
 .upgrade-choice span { color: #d0dbe1; }
+.upgrade-choice.standard-upgrade-slot::before { content:"STANDARD / SCHÜTZE"; display:block; margin-bottom:4px; color:#ffd987; font-size:10px; letter-spacing:.12em; }
 .hint { margin: 6px 0 0; text-align: center; color: #66899a; font-size: 11px; }
 
 @media (max-height: 620px) {
@@ -218,6 +219,11 @@ button:active { transform: scale(.98); }
 .menu-nav svg { display: block; margin: 0 auto 4px; width: 40px; height: 40px; padding: 7px; border: 2px solid #bc9454; border-radius: 50%; background: radial-gradient(#53697e,#172d40); fill: #b8cede; stroke: #fff3c8; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 2px 2px #000); }
 .menu-nav #navHome svg { background: radial-gradient(#8baa54,#304c2a); }
 .menu-version { margin: 0; text-align: center; font-size: 9px; color: #ead8b2; flex-shrink: 0; }
+.season-banner { display:none; }
+.season-options { margin:0 0 22px; padding:12px; border:1px solid #b89555; border-radius:12px; background:#071a28cc; }
+.season-options h3 { margin-top:0; color:#ffe1a1; }
+.season-options label { display:block; margin-bottom:7px; color:#d4e1e8; font-size:12px; font-weight:800; }
+.season-options select { width:100%; min-height:46px; padding:8px 10px; border:1px solid #d1ad68; border-radius:9px; background:#10283a; color:#fff4d0; font:700 12px system-ui,sans-serif; }
 .menu-sheet { overflow-y: auto; overscroll-behavior: contain; background: #0b202feb; border: 1px solid #d7b46c; border-radius: 16px; padding: 20px 16px; margin: 8px 0; line-height: 1.5; overflow-wrap: anywhere; }
 .menu-sheet h2 { font: bold 32px Georgia,serif; color: #ffdf92; margin: 7px 0 15px; }
 .menu-sheet h3 { font-size: 16px; }
@@ -237,6 +243,97 @@ button:active { transform: scale(.98); }
   .menu-title > span, .menu-title p { display: none; }
   .menu-nav svg { width: 30px; height: 30px; padding: 4px; }
   .play-button { font-size: 23px; padding: 7px; }
+}
+
+/* Seasonal Halloween menu. The class is driven by the device's local date or
+   the explicit option selected by the player. Gameplay remains unchanged. */
+html.halloween-theme body { background:#090519; }
+.halloween-theme .fantasy-menu {
+  isolation:isolate;
+  background:
+    linear-gradient(180deg,rgba(4,2,17,.18) 0%,rgba(11,5,27,.04) 42%,rgba(8,2,15,.72) 78%,rgba(4,1,9,.94) 100%),
+    url('halloween-menu-background.webp') center / cover no-repeat;
+  color:#fff0d0;
+}
+.halloween-theme .fantasy-menu::before {
+  content:""; position:absolute; z-index:-1; inset:40% -25% 8%; pointer-events:none;
+  background:
+    radial-gradient(ellipse at 25% 45%,rgba(150,105,218,.24),transparent 43%),
+    radial-gradient(ellipse at 75% 62%,rgba(92,61,154,.28),transparent 46%);
+  filter:blur(11px); animation:halloweenFog 9s ease-in-out infinite alternate;
+}
+.halloween-theme .fantasy-menu > * { position:relative; z-index:1; }
+@keyframes halloweenFog { from { transform:translateX(-3%) scale(1); opacity:.72; } to { transform:translateX(3%) scale(1.08); opacity:1; } }
+.halloween-theme .menu-topbar { filter:drop-shadow(0 5px 6px #020008cc); }
+.halloween-theme .menu-profile,
+.halloween-theme .coin-counter {
+  border:2px solid #ee983f; background:linear-gradient(145deg,#291544f2,#100b25f2);
+  box-shadow:inset 0 0 0 2px #58336d,0 3px 0 #30142e,0 6px 15px #000b;
+}
+.halloween-theme .menu-profile { color:#ffad49; }
+.halloween-theme .menu-profile small { color:#d5c2ef; }
+.halloween-theme .coin-counter { color:#ffd268; }
+.halloween-theme .menu-title { padding-top:2px; text-shadow:0 3px 6px #080113,0 0 18px #331453; }
+.halloween-theme .menu-title > span { color:#f9bd68; }
+.halloween-theme .menu-title h1 {
+  color:#ffb344; font-size:clamp(39px,12vw,58px); margin:1px 0;
+  text-shadow:0 2px 0 #8b3c1b,0 4px 0 #3d1625,0 0 15px #ff6a2488,0 7px 12px #000;
+}
+.halloween-theme .menu-title p { margin:2px 0; color:#f3d9d0; }
+.halloween-theme .season-banner {
+  display:inline-block; margin-top:5px; padding:5px 12px; border:1px solid #f09342;
+  border-radius:999px; color:#ffd27d; background:#1a0c2bd9; font:800 10px Georgia,serif;
+  letter-spacing:.1em; box-shadow:0 0 13px #ff6f2c66;
+}
+.halloween-theme .home-actions { margin-top:auto; padding:0 3px 2px; }
+.halloween-theme .level-picker {
+  margin:0 auto 6px; max-width:390px; border:2px solid #e78337; border-radius:13px;
+  background:linear-gradient(145deg,#2b1744ed,#100a21f2); color:#ffe0a0;
+  box-shadow:inset 0 0 0 2px #5a356f,0 5px 12px #000a;
+}
+.halloween-theme .level-picker button { border-color:#a65037; background:#35184f; color:#ffad4a; }
+.halloween-theme .home-actions .difficulty-picker {
+  max-width:390px; margin:0 auto; padding:6px; border:2px solid #8b4c92;
+  background:linear-gradient(#1f1036ed,#0d091ceb); box-shadow:0 5px 12px #0009;
+}
+.halloween-theme .home-actions .difficulty-picker legend { color:#ffc875; }
+.halloween-theme .home-actions .difficulty-picker span { border-color:#754886; background:#190d2b; color:#e8d8f7; }
+.halloween-theme .home-actions .difficulty-picker input:checked + span {
+  border-color:#ff9b42; background:linear-gradient(#ffb245,#c95423); color:#241025;
+  box-shadow:0 0 14px #ff762777;
+}
+.halloween-theme .play-button {
+  display:block; width:min(72%,260px); min-height:94px; margin:9px auto 5px; padding:8px 14px;
+  border:4px solid #ffbf55; outline:2px solid #512347; border-radius:50%; color:#311123;
+  background:radial-gradient(ellipse at 50% 36%,#ffd96d 0%,#ffad31 43%,#e25c20 78%,#7c281e 100%);
+  box-shadow:inset 0 0 0 4px #8e351d,inset 0 0 22px #fff09a99,0 5px 0 #43182c,0 10px 24px #000c,0 0 24px #ff6a2a88;
+  font:bold 28px Georgia,serif; text-shadow:0 1px 0 #ffe599;
+}
+.halloween-theme .play-button .play-icon { display:block; height:34px; font-size:0; line-height:34px; }
+.halloween-theme .play-button .play-icon::after { content:"▶"; font-size:34px; color:#481628; filter:drop-shadow(0 2px 0 #ffdf7a); }
+.halloween-theme .play-button small { color:#5c2030; }
+.halloween-theme .menu-records { margin:5px 0 2px; color:#fff1cf; }
+.halloween-theme .menu-nav {
+  border:2px solid #e17b38; background:linear-gradient(#2e1747f5,#10091ff8); padding:5px;
+  box-shadow:inset 0 0 0 2px #57336d,0 5px 15px #000c;
+}
+.halloween-theme .menu-nav button { color:#f4d7b2; }
+.halloween-theme .menu-nav button.selected { border-color:#ffad45; background:linear-gradient(#763566cc,#291633); color:#ffd778; }
+.halloween-theme .menu-nav svg { border-color:#d77a37; background:radial-gradient(#743966,#201330); fill:#c4a4e5; stroke:#ffd37d; }
+.halloween-theme .menu-nav #navHome svg { background:radial-gradient(#e4772f,#4b1c35); }
+.halloween-theme .menu-version { color:#cdb9df; text-shadow:0 2px 3px #000; }
+.halloween-theme .menu-sheet { border-color:#dc773a; background:linear-gradient(155deg,#24113bf5,#0d091bf7); box-shadow:inset 0 0 30px #6b2e5a33; }
+.halloween-theme .menu-sheet h2,
+.halloween-theme .menu-sheet h3 { color:#ffbd64; }
+.halloween-theme .menu-sheet button { border-color:#ffad56; background:linear-gradient(#f5a543,#b94728); color:#2b1021; }
+.halloween-theme .season-options { border-color:#c26642; background:#160c29d9; }
+.halloween-theme .season-options select { border-color:#db7f43; background:#281442; color:#ffe2a4; }
+@media (prefers-reduced-motion:reduce) { .halloween-theme .fantasy-menu::before { animation:none; } }
+@media (max-height:620px) {
+  .halloween-theme .season-banner { margin-top:1px; padding:3px 9px; }
+  .halloween-theme .play-button { min-height:73px; width:min(64%,220px); font-size:23px; margin-top:5px; }
+  .halloween-theme .play-button .play-icon { height:23px; line-height:23px; }
+  .halloween-theme .play-button .play-icon::after { font-size:24px; }
 }
 
 /* Arena 10: stone scenery, gold borders, clear blue combat surface. */
@@ -265,6 +362,9 @@ body { padding: 0; background: #111c21; }
 .overlay:not(.fantasy-menu) .panel { border: 2px solid #dfbb72; background: linear-gradient(145deg,#18314a,#0a192b); box-shadow: inset 0 0 0 2px #6f532c, 0 14px 35px #0008; }
 .overlay:not(.fantasy-menu) h2 { color: #ffe5a2; font-family: Georgia,serif; }
 #gameOverScreen button { background: linear-gradient(#e6c884,#b98b46); color: #302417; }
+#gameOverScreen .share-run-button { background: linear-gradient(#78dddc,#3d9faa); color: #08282d; }
+.share-run-status { min-height: 1.25em; margin: 5px 0; color: #c9f7f2; font-size: 11px; }
+.shooter-combat-status { min-height: 14px; margin: -2px 0 4px; color: #fff0b5; font: bold 9px Georgia,serif; text-align: center; text-shadow: 0 1px 3px #000; }
 @media (max-width: 350px) {
   .game-shell { padding-left: 16px; padding-right: 16px; }
   .stat-icon { width: 20px; height: 20px; padding: 3px; }
@@ -277,7 +377,7 @@ body { padding: 0; background: #111c21; }
 }
 
 /* Prepared team slots: no recruitment or equipment changes yet. */
-.menu-nav { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.menu-nav { grid-template-columns: repeat(4,minmax(0,1fr)); }
 .hero-formation { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin: 22px 0; align-items: end; }
 .hero-slot { min-width: 0; text-align: center; padding: 10px 3px; border: 1px solid #c5a563; border-radius: 10px; background: #193144; }
 .hero-slot strong, .hero-slot small { display: block; }
@@ -296,6 +396,8 @@ body { padding: 0; background: #111c21; }
 .paladin-card img { height:160px; width:150px; object-fit:contain; }
 .paladin-card h3 { margin:4px; color:#ffdf91; font: bold 24px Georgia,serif; }
 .paladin-card p { margin:6px 0; }
+.paladin-card.ilyra-card { border-color:#a8eaff; background:linear-gradient(145deg,#173551,#102b45); box-shadow:inset 0 0 24px #79dfff18; }
+.paladin-card.ilyra-card h3 { color:#c9f4ff; text-shadow:0 0 10px #6edfff88; }
 .hero-equip { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 #paladinStats { font-size:9px; }
 
@@ -377,29 +479,4 @@ button:disabled { opacity:.5; cursor:default; }
   .platform-stats > strong { top:-12px; margin:-12px -12px 10px; padding:12px; font-size:16px; }
   .desktop-hero-details dl { font-size:11px; }
   .hero-upgrade-list li,.permanent-skill-list li { font-size:11px; }
-}
-
-/* Test repository: editor level importer. */
-.level-lab label { display:block; margin-top:14px; color:#ffe1a1; font-size:12px; }
-.level-lab .custom-difficulty-picker { margin:14px 0 8px; padding:7px; border:1px solid #b89555; border-radius:10px; background:#071a28cc; }
-.level-lab .custom-difficulty-picker label { margin-top:0; }
-.level-lab input[type=text] {
-  width:100%; min-height:44px; margin-top:7px; padding:9px 10px;
-  border:1px solid #b89555; border-radius:8px; background:#041522; color:#f3fbff;
-  font:14px ui-monospace,SFMono-Regular,Consolas,monospace;
-}
-.level-file-label { padding:11px; border:1px dashed #8db4c8; border-radius:9px; background:#071a28cc; }
-.level-divider { display:flex; align-items:center; gap:9px; margin:18px 0 4px; color:#99b5c4; font-size:11px; }
-.level-divider::before,.level-divider::after { content:""; height:1px; flex:1; background:#5a7481; }
-.test-warning { padding:9px 10px; border:1px solid #e0ae54; border-radius:8px; background:#463411cc; color:#ffe3a0; font-size:11px; }
-.custom-level-summary { display:grid; gap:4px; margin:16px 0 4px; padding:12px; border:1px solid #6da8c4; border-radius:10px; background:#061825; }
-.custom-level-summary strong { color:#fff0b9; font:700 17px Georgia,serif; }
-.custom-level-summary span { color:#c5d9e3; font-size:11px; line-height:1.45; }
-.custom-level-summary.error { border-color:#ff756d; background:#39171a; }
-.custom-level-summary.ready { border-color:#73df9a; background:#0b2b24; }
-.level-lab code { color:#fff0b9; overflow-wrap:anywhere; }
-.level-lab .play-button { color:#fff0bf; }
-@media (max-width:420px) {
-  .menu-nav button { font-size:9px; }
-  .menu-nav svg { width:32px; height:32px; }
 }

@@ -1,68 +1,158 @@
-# The Snake · Level-Test
+# The Snake
 
-Separate Testversion für Leveldateien aus **The Snake Editor**. Die normale
-Spielversion im Repository `The-Snake` bleibt davon unberührt.
+## Version 23.1 Test – Halloween-Hauptmenü
 
-## Eigenes Level testen
+- Eigenes vertikales Halloween-Hintergrundmotiv mit Vollmond, Schlangenschatten,
+  Schloss, Nebel, Laternen und Kürbissen.
+- Das Hauptmenü erhält während Halloween eine violett-orange Oberfläche,
+  saisonale Navigationsrahmen und einen großen gold-orangefarbenen Spielen-Knopf.
+- Der Browser verwendet das lokale Datum und die lokale Uhrzeit des Handys,
+  Tablets oder Computers. Der automatische Zeitraum läuft vom 1. Oktober bis
+  einschließlich 2. November.
+- Unter Optionen kann das saisonale Design auf `Automatisch`, `Immer aktiv`
+  oder `Deaktiviert` gestellt werden. Die Auswahl wird lokal gespeichert.
+- Neues optimiertes Asset: `halloween-menu-background.webp`.
 
-1. Exportiere das Level im Desktop-Editor als JSON.
-2. Lade die JSON-Datei und alle verwendeten PNG-Dateien in den **Hauptordner**
-   dieses Repositories hoch.
-3. Öffne die GitHub-Pages-Testseite und wähle unten **Level-Labor**.
-4. Trage den exakten JSON-Dateinamen ein, zum Beispiel `Level_4.json`.
-5. Tippe auf **Level aus GitHub laden** und danach auf **Testlevel starten**.
+## Version 23.0 – Seraphine
 
-Alternativ lässt sich eine JSON-Datei direkt vom Gerät prüfen. Die darin
-genannten PNGs werden trotzdem aus dem GitHub-Hauptordner geladen.
+- Seraphine – Meisterin der Glut ist als sechste Seitenheldin vollständig
+  integriert und von Beginn an für 0 Münzen freigeschaltet.
+- Ihr Glutstab verbindet Direktschaden mit erneuerbaren Brandstapeln,
+  Überhitzungsexplosionen, Feuerübertragung und echten Kettenreaktionen.
+- Feuerwelle und Inferno werden automatisch ausgelöst; sämtliche Seraphine-
+  Schadensquellen unterstützen die gemeinsame Krit- und Schadensskalierung.
+- Der magische Feuerring besteht vollständig aus animierten Canvas-Ebenen und
+  ersetzt für Seraphine die normale Plattformgrafik.
+- Alle 24 Run-Fähigkeiten und fünf Basismechaniken besitzen eine eigene
+  einmalige 50-Münzen-Aufwertung. Seraphines Karten bleiben auf Slot 1 bis 3
+  beschränkt; Slot 4 bleibt dem Standardschützen vorbehalten.
+- Neue Dateien: `seraphine.js`, `seraphine-front.png`, `SERAPHINE.md` und
+  `test-seraphine.cjs`.
+- Geprüft mit `node test-game.cjs`, `node test-levels-2-10.cjs`,
+  `node test-alchemist.cjs`, `node test-runemaster.cjs`, `node test-ilyra.cjs`,
+  `node test-shooter.cjs`, `node test-skills.cjs` und
+  `node test-seraphine.cjs`.
 
-Windows-Pfade aus dem Editor werden automatisch auf den Dateinamen gekürzt:
-`D:\Game-Making\...\Busch.png` wird im Browser zu `Busch.png`.
+## Version 22.0 – Ilyra
 
-## Unterstützter Export
+- Ilyra – Hüterin des Winterherzens ist als fünfte Seitenheldin vollständig
+  integriert und kostet 0 Münzen.
+- Frostzepter, Froststapel, Eisbruch, Frostnova und die durch Nullpunkt
+  freigeschaltete Winterstille sind aktiv.
+- Alle bestätigten Grau-, Grün-, Lila- und Orange-Fähigkeiten sowie die
+  einmaligen 50-Münzen-Aufwertungen stehen im Helden- und Skillfenster bereit.
+- Ilyras exklusive Karten bleiben auf die ersten drei Upgrade-Slots beschränkt;
+  Slot 4 bleibt ausschließlich Standard / Schütze.
+- Die Seitenplattform besitzt Frostleuchten und Kristallpartikel. Die neue
+  transparente Charaktergrafik ist für mobile Ladezeiten optimiert.
+- Technische Details: [ILYRA.md](ILYRA.md).
 
-- mehrere Schlangen pro Level (werden nacheinander gestartet)
-- Kopf- und Körper-PNG je Schlange
-- Segmentzahl und Geschwindigkeit
-- Wegpunkte, skaliert auf die aktuelle Arena
-- Hindernisse mit PNG, Position und Größe
-- optionale `firstHp`/`lastHp` oder `hp.first`/`hp.last`
+Tests: `node test-game.cjs`, `node test-shooter.cjs`, `node test-alchemist.cjs`,
+`node test-runemaster.cjs`, `node test-ilyra.cjs`, `node test-skills.cjs` und
+`node test-levels-2-10.cjs`.
 
-Wenn die HP-Angaben fehlen, nutzt die Testfassung vorläufig 5 bis 5.500 HP.
-Ein unvollständiger Weg endet automatisch mit einer senkrechten Strecke zur
-Gefahrenlinie, damit die Schlange nicht seitlich aus dem Spielfeld verschwindet.
+## Version 21.4 – Längere Level-7-Route
 
-Testläufe vergeben keine Münzen und verändern keine Freischaltungen.
+- Der Pfad von Level 7 ist ungefähr 15 % länger.
+- Die zusätzlichen Kurven werden progressiv in den unteren Bereich gelegt:
+  oben bleibt der Einstieg nahezu unverändert, nach unten wird das Muster enger.
+- Spielfeldbreite, schneller Routeneintritt und alle Level-10-Regeln bleiben
+  unverändert erhalten.
 
-## Version 19.0 – Kaelvar im Level-Labor
+## Version 21.3 – Breite Levelrouten
 
-Kaelvar ist vollständig aus dem Hauptspiel übernommen. Eigene Testlevel können
-mit Runenkanone, Runenbruch, Runenschlag, Runenkreis und allen Kaelvar-Upgrades
-gespielt werden. Hindernisse blockieren auch seine direkten Runenprojektile.
-Details: [KAELVAR.md](KAELVAR.md).
+- Die Bewegungsmuster aller Level von 2 bis 10 nutzen nun nahezu die gesamte
+  sichtbare Spielfeldbreite.
+- Der sichere Seitenabstand wurde passend zum skalierten Schlangenkopf auf 22 px
+  reduziert. Die getestete Gesamtabdeckung reicht in jedem Level bis höchstens
+  28 px an beide Bildschirmränder heran.
+- Einzelne Wellen, Bögen, S-Kurven und komplexe Muster wurden verbreitert; bei
+  Mehrschlangen-Leveln zählt die gemeinsame Abdeckung aller Routen.
+- Das Level-10-Trio, die längere Mittelroute und der Rage-Zyklus bleiben erhalten.
 
-## Version 18.6 – Level-Schwierigkeiten
+## Version 21.2 – Level-10-Trio und Rage
 
-- Unterstützt das Editorformat 2 mit getrennten Bereichen `easy`, `normal`
-  und `hard`.
-- Leicht, Mittel und Schwer können jeweils eigene Schlangenwege,
-  Segmentzahlen, Geschwindigkeiten und Hindernisse besitzen.
-- Die Schwierigkeit lässt sich direkt im Level-Labor wählen. Die Vorschau zeigt
-  sofort die Werte der ausgewählten Variante.
-- Format-1-Level bleiben kompatibel und verwenden ihren Aufbau für alle drei
-  Schwierigkeitsgrade.
-- Die bisherigen HP-Faktoren bleiben aktiv: Leicht 1×, Mittel 1,5× und Schwer
-  2×, sofern der Editorexport keine abweichenden HP-Grundwerte festlegt.
+- Level 10 startet mit drei technisch getrennten Schlangen auf linker, mittlerer
+  und rechter Route.
+- Die beiden äußeren Schlangen bewegen sich mit der normalen
+  Levelgeschwindigkeit.
+- Die mittlere Schlange besitzt die längste Route. Ab Sekunde 15 aktiviert sie
+  alle 15 Sekunden für 3 Sekunden Rage und bewegt sich dabei 20 % schneller.
+- Ein roter Ring und die Beschriftung `RAGE` zeigen den aktiven Modus direkt am
+  Kopf der mittleren Schlange an.
 
-## Version 18.5 – blockierende Hindernisse
+## Version 21.1 – Schneller Routeneinstieg und höhere Endlevel-HP
 
-- Die im Level platzierten Hindernisse blockieren alle direkten Geschosse in
-  ihrer vollständigen, im JSON angegebenen Breite und Höhe.
-- Auch sehr schnelle Projektile werden entlang ihrer Bewegung zwischen zwei
-  Bildern geprüft und können nicht durch ein Hindernis springen.
-- Ein blockierter Schuss verschwindet am Rand des Hindernisses. Seelen und
-  bereits ausgelöste Flächeneffekte gelten nicht als direkte Schüsse.
-- Testläufe schreiben auch für zerstörte Segmente keine Münzen in den normalen
-  Spielstand.
+- Alle generierten Schlangenrouten von Level 2 bis 10 beginnen mit einem kurzen
+  geraden Einlauf. Der Kopf erreicht den sichtbaren Bereich nun nach rund 24 px
+  statt erst nach langen unsichtbaren Kurven.
+- Die Segmentleben der Level 5 bis 10 wurden über die jeweilige vollständige
+  HP-Kurve um 25 % erhöht. Die neuen Endwerte reichen von 40.000 in Level 5 bis
+  175.000 in Level 10.
+- Die Mindestlänge aller Routen bleibt mindestens so groß wie der Referenzpfad
+  aus Level 1.
+
+## Version 21.0 – Schützen-Arsenal
+
+- Der Standardschütze besitzt jetzt 14 neue dreistufige Runden-Upgrades sowie
+  zehn seltene Spezialfähigkeiten für Krit-, Schnellfeuer-, Mehrfachschuss-,
+  Durchschlag- und Präzisions-Builds.
+- Präzisionsschuss darf beliebig oft gewählt werden. Alle anderen Stufen gelten
+  einmal pro Run; Salvenmeister erscheint erst nach aktivem Mehrfachschuss.
+- Kugelhagel und Meisterschütze bilden die orangefarbenen Endgame-Fähigkeiten.
+  Geschossregen verursacht pro erzeugtem Geschoss 300 % Schaden.
+- Sämtliche neuen Fähigkeiten können im reservierten vierten Standard-Slot
+  erscheinen. Exklusive Fähigkeiten von Aldric, Vaelric, Selvara und Kaelvar
+  bleiben dort ausgeschlossen.
+- Für jede neue Fähigkeit steht im Schützen-Skillfenster eine dauerhafte
+  Aufwertung zur Verfügung. Laufende Effekte werden im Kampf-HUD angezeigt.
+
+## Version 20.3 – Heldenbalance und Ergebnis teilen
+
+- Selvaras vollständig ausgebauter Einzelziel-Schaden wurde verteilt über Fläschchen, Gift, Explosive Mischung, Giftregen und Giftwolke auf ungefähr 310 DPS angehoben.
+- Aldrics vollständig ausgebauter Einzelziel-Schaden wurde verteilt über Feuerrate, Hammer, Heiligen Einschlag, Morgenlicht, Vergeltung und Göttliches Urteil auf ungefähr 285 DPS angehoben.
+- Nach Sieg und Niederlage kann das Rundenergebnis über das native Teilen-Menü geteilt werden. Ohne Web-Share-Unterstützung werden Text und Spiellink kopiert.
+- Der Teiltext nennt Level, erreichtes Segment und Punktestand.
+
+## Version 20.2 – Vollständige HP-Kurve bei zwei Schlangen
+
+In Level 3, 5, 8 und 10 verwendet jetzt jede der beiden Schlangen unabhängig
+die vollständige HP-Kurve des Levels. Das erste Segment beider Schlangen besitzt
+den jeweiligen Minimalwert; das letzte Segment beider Schlangen erreicht den
+Maximalwert. Alle dazwischenliegenden Segmentleben steigen pro Schlange
+prozentual und streng an. Schwierigkeit bleibt als Multiplikator erhalten.
+
+## Version 20.1 – Vier Upgrade-Auswahlen
+
+Beim Zerstören eines besonderen Segments erscheinen jetzt vier unterschiedliche
+Upgrade-Karten. Die ersten drei Karten verwenden weiterhin den vollständigen
+Pool aus allgemeinen und ausgerüsteten Heldenfähigkeiten. Der vierte Platz ist
+fest als **Standard / Schütze** reserviert und kann ausschließlich allgemeinen
+Schaden, Feuerrate, Durchschlag, Krit-Upgrades und Schussfähigkeiten des
+Standardschützen anbieten. Heldenfähigkeiten können dort nicht erscheinen.
+
+## Version 20.0 – Level 2 bis 10
+
+Die Kampagne umfasst jetzt zehn vorbereitete Level. Level 1 verwendet weiterhin
+unverändert den bisherigen Referenzpfad. Level 2 bis 10 besitzen datengetriebene,
+deterministische Bewegungsmuster; Level 3, 5, 8 und 10 enthalten zwei technisch
+getrennte Schlangen. Automatisch zielende Angriffe bestimmen bei jedem neuen
+Schuss die zum Angriffsursprung nächstgelegene Schlange und berücksichtigen nur
+sichtbare Segmente. Alte Spielstände mit neun Erstabschluss-Einträgen werden
+automatisch auf zehn Level beziehungsweise 30 Kombinationen aus Level und
+Schwierigkeit erweitert. Technische Details: [LEVELS-2-10.md](LEVELS-2-10.md).
+
+Tests: `node test-game.cjs`, `node test-shooter.cjs`, `node test-alchemist.cjs`,
+`node test-skills.cjs`, `node test-runemaster.cjs` und
+`node test-levels-2-10.cjs`.
+
+## Version 19.0 – Kaelvar
+
+Kaelvar, der Meister der lebenden Runen, ist als vierter freischaltbarer
+Begleitheld implementiert. Runenkanone, Runenladungen, Runenbruch, Runenschlag,
+Großer Runenkreis, alle festgelegten Seltenheits-Upgrades, Sonderfähigkeiten,
+Heldenmenü, Plattform-HUD, Browser-Speicherung und transparente Grafik sind
+enthalten. Details: [KAELVAR.md](KAELVAR.md).
 
 ## Version 18.3
 

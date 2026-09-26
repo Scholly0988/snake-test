@@ -9,7 +9,7 @@ function newPaladin(slot) {
 function paladinX() { return state.player.x + (state.paladin.slot === "left" ? -36 : 36); }
 function paladinDamage() { return (state.weapon.damage + 1) * state.paladin.damageMultiplier; }
 function paladinDirectDamage(bullet={}) {
-  return paladinDamage()*skillValue("paladin","attack",1,1.2)*(bullet.fullSweep?skillValue("paladin","blade",1,1.25):1);
+  return paladinDamage()*skillValue("paladin","attack",1,1.45)*(bullet.fullSweep?skillValue("paladin","blade",1,1.25):1);
 }
 // A segment becomes damageable when its center enters the visible canvas.
 function isSegmentVisible(s) { return s.x >= 0 && s.x <= state.width && s.y >= 0 && s.y <= state.height; }
@@ -28,7 +28,7 @@ function paladinExplosion(batch, center, radius, damage, excludeId, random) {
   holyArea(batch, center, radius, damage, excludeId);
   // Second light strike is terminal: it cannot trigger itself or critical effects.
   if (random() < state.paladin.morningChance) {
-    holyArea(batch, center, radius, paladinDamage() * skillValue("paladin","morning",.5,.75) * state.paladin.explosionMultiplier);
+    holyArea(batch, center, radius, paladinDamage() * skillValue("paladin","morning",.5,1.1) * state.paladin.explosionMultiplier);
     state.holyEffects.push({x:center.x,y:center.y,radius:radius*.6,life:.6,maxLife:.6,kind:"light"});
   }
 }
@@ -37,10 +37,10 @@ function paladinHit(batch, segment, hit, random) {
   p.hits++;
   state.holyEffects.push({x:segment.x,y:segment.y,radius:12,life:.2,maxLife:.2,kind:"ring"});
   if (p.hits % p.impactEvery === 0) {
-    paladinExplosion(batch, segment, p.radius, paladinDamage() * skillValue("paladin","impact",.5,.6) * p.explosionMultiplier, null, random);
+    paladinExplosion(batch, segment, p.radius, paladinDamage() * skillValue("paladin","impact",.5,.9) * p.explosionMultiplier, null, random);
   }
   if (p.revenge && hit.critical) {
-    addDamage(batch, segment, paladinDamage() * skillValue("paladin","revenge",.5,1));
+    addDamage(batch, segment, paladinDamage() * skillValue("paladin","revenge",.5,1.25));
     state.holyEffects.push({x:segment.x,y:segment.y,radius:18,life:.4,maxLife:.4,kind:"light"});
   }
 }
@@ -58,7 +58,7 @@ function updatePaladin(dt) {
       vy:-510*p.speed,size:p.size,hitsLeft:Infinity,dead:false,hammerPhase:"approach",fullSweep,
       sweepIds:fullSweep?visibleTargets().map(s=>s.id):null,
       charged:p.hits % p.impactEvery === p.impactEvery-1});
-    p.fireTimer += 1 / (state.weapon.shotsPerSecond * .65);
+    p.fireTimer += 1 / (state.weapon.shotsPerSecond * .75);
     p.swing = .18;
   }
   if (!p.ultimate) return;
@@ -70,7 +70,7 @@ function updatePaladin(dt) {
       const target = targets[0];
       const batch = new Map();
       const radius = p.radius * 2;
-      paladinExplosion(batch, target, radius, paladinDamage()*skillValue("paladin","judgment",5,7.5)*p.explosionMultiplier, null, Math.random);
+      paladinExplosion(batch, target, radius, paladinDamage()*skillValue("paladin","judgment",5,10)*p.explosionMultiplier, null, Math.random);
       state.holyEffects.push({x:target.x,y:target.y,radius:36,life:.65,maxLife:.65,kind:"judgment"});
       p.remaining = p.cooldown;
       applyDamageBatch(batch);
@@ -125,7 +125,7 @@ function paladinUpgradePool() {
   if (!p) return [];
   const card = (id,rarity,name,text,apply) => ({id,rarity,name,text:"Aldric · "+skillCardText("paladin",id,text),apply});
   const pool = [
-    card("consecrated","grey","Geweihter Hammer","+20 % Hammerschaden.",()=>p.damageMultiplier*=skillValue("paladin","consecrated",1.2,1.3)),
+    card("consecrated","grey","Geweihter Hammer","+20 % Hammerschaden.",()=>p.damageMultiplier*=skillValue("paladin","consecrated",1.2,1.4)),
     card("steel","green","Gesegneter Stahl","+15 % Projektilgröße.",()=>p.size*=skillValue("paladin","steel",1.15,1.25)),
     card("flight","green","Hammerflug","+20 % Projektilgeschwindigkeit.",()=>p.speed*=skillValue("paladin","flight",1.2,1.3))
   ];
@@ -133,7 +133,7 @@ function paladinUpgradePool() {
   else if(p.bladeEvery===5)pool.push(card("ancestors","purple","Hammer der Vorfahren","Heilige Klinge wird bei jedem 4. Hammerwurf ausgelöst.",()=>{p.bladeEvery=skillValue("paladin","ancestors",4,3);p.throws=0;}));
   for (const [rarity,radius,damage] of [["grey",15,10],["green",30,20],["purple",50,40]]) {
     pool.push(card("force-"+rarity,rarity,"Heilige Wucht","+"+radius+" % Explosionsradius.",()=>p.radius*=1+(radius+skillValue("paladin","force",0,5))/100));
-    pool.push(card("breaker-"+rarity,rarity,"Lichtbrecher","+"+damage+" % Explosionsschaden.",()=>p.explosionMultiplier*=1+(damage+skillValue("paladin","breaker",0,10))/100));
+    pool.push(card("breaker-"+rarity,rarity,"Lichtbrecher","+"+damage+" % Explosionsschaden.",()=>p.explosionMultiplier*=1+(damage+skillValue("paladin","breaker",0,15))/100));
   }
   if (p.impactEvery===4) pool.push(card("verdict","green","Richterspruch","Heiliger Einschlag bei jedem 3. statt 4. Treffer. Einmal pro Runde.",()=>{p.impactEvery=skillValue("paladin","verdict",3,2);p.hits=0;}));
   if (!p.ultimate) pool.push(card("wrath-unlock","orange","Göttlicher Zorn","Schaltet Göttliches Urteil frei: alle 20 s ein Flächentreffer mit 500 % Hammerschaden.",()=>{p.ultimate=true;p.cooldown=skillValue("paladin","wrath",20,18);p.remaining=p.cooldown;}));
@@ -167,7 +167,7 @@ function heroDetailRows(hero) {
   if(hero==="paladin"){
     const p=state.paladin;
     return [
-      ["Direktschaden",hudNumber(paladinDirectDamage())],["Feuerrate",hudNumber(state.weapon.shotsPerSecond*.65/2.7)+"×"],
+      ["Direktschaden",hudNumber(paladinDirectDamage())],["Feuerrate",hudNumber(state.weapon.shotsPerSecond*.75/2.7)+"×"],
       ["Krit-Chance",hudNumber(state.weapon.critChance)+" %"],["Krit-Schaden",hudNumber(state.weapon.critDamage)+" %"],
       ["Hammergröße",hudNumber(p.size*100)+" %"],["Flugtempo",hudNumber(p.speed*100)+" %"],
       ["Heiliger Einschlag","jeder "+p.impactEvery+". Treffer"],["Explosionsradius",hudNumber(p.radius)+" px"],
@@ -208,6 +208,37 @@ function heroDetailRows(hero) {
       ["Runenmeisterschaft",r.mastery?"aktiv":"nicht aktiv"],["Domino-Glyphe",r.domino?"aktiv":"nicht aktiv"]
     ];
   }
+  if(hero==="ilyra"){
+    const i=state.ilyra,stacks=state.snake.reduce((sum,s)=>sum+frostStacks(s),0);
+    return [
+      ["Direktschaden",hudNumber(ilyraDirectDamage())],["Feuerrate",hudNumber(ilyraRateMultiplier())+"×"],
+      ["Krit-Chance",hudNumber(state.weapon.critChance)+" %"],["Krit-Schaden",hudNumber(state.weapon.critDamage)+" %"],
+      ["Froststapel",stacks],["Eisbruch-Schwelle",ilyraFrostGoal()],
+      ["Frostdauer",hudNumber(i.frostDuration)+" s"],["Frost-Slow",hudNumber(i.frostSlow*100)+" % je Stapel"],
+      ["Eisbruch",hudNumber(i.icebreakDamage*(1+i.icebreakBonus))+" Schaden"],["Kristallexplosion",hudNumber(i.explosionDamage)+" Schaden"],
+      ["Frostnova",Math.ceil(i.novaRemaining)+" / "+i.novaCooldown+" s"],["Nova-Radius",hudNumber(i.novaRadius*(1+i.novaRadiusBonus))+" px"],
+      ["Durchschlag",i.pierce],["Splitterbruch",i.splitterCount?i.splitterCount+" × "+hudNumber(i.splitterDamage):"nicht aktiv"],
+      ["Absolute Kälte",i.absoluteCold?"aktiv":"nicht aktiv"],["Frostseuche",i.frostPlague?"aktiv":"nicht aktiv"],
+      ["Gletscherherz",i.glacierHeart?"aktiv":"nicht aktiv"],["Eiszeit",i.iceAge?i.icebreakCount%skillValue("ilyra","iceAge",5,4)+" / "+skillValue("ilyra","iceAge",5,4):"nicht aktiv"],
+      ["Schwarzes Eis",i.blackIce?"aktiv":"nicht aktiv"],["Winterstille",i.nullPoint?(i.winterActive>0?"aktiv":Math.ceil(i.winterRemaining)+" s"):"gesperrt"]
+    ];
+  }
+  if(hero==="seraphine"){
+    const s=state.seraphine,stacks=state.snake.reduce((sum,segment)=>sum+burnStacks(segment),0);
+    return [
+      ["Direktschaden",hudNumber(seraphineDirectDamage())],["Feuerrate",hudNumber(seraphineRateMultiplier())+"×"],
+      ["Krit-Chance",hudNumber(state.weapon.critChance)+" %"],["Krit-Schaden",hudNumber(state.weapon.critDamage)+" %"],
+      ["Brandstapel",stacks],["Überhitzungsgrenze",seraphineThreshold()],
+      ["Brenndauer",hudNumber(s.burnDuration)+" s"],["Brand je Stapel",hudNumber(s.burnDps)+"/s"],
+      ["Explosion",hudNumber(s.explosionMain*(1+s.explosionBonus))+" Schaden"],["Explosionsradius",hudNumber(s.explosionRadius*(1+s.explosionRadiusBonus))+" px"],
+      ["Feuerwelle",Math.ceil(s.waveRemaining)+" / "+s.waveCooldown+" s"],["Wellenradius",hudNumber(s.waveRadius*(1+s.waveRadiusBonus))+" px"],
+      ["Durchschlag",s.pierce],["Feuerfunken",s.sparkCount?s.sparkCount+" × "+hudNumber(s.sparkDamage):"nicht aktiv"],
+      ["Übertragung",hudNumber(s.transferChance*100)+" %"],["Feuererbe",s.transferCount+" Stapel"],
+      ["Ewige Glut",s.eternalEmber?"aktiv":"nicht aktiv"],["Flammenpfad",s.flamePath?"aktiv":"nicht aktiv"],
+      ["Feuerseuche",s.firePlague?"aktiv":"nicht aktiv"],["Höllenglut",s.hellEmber?"aktiv":"nicht aktiv"],
+      ["Feuersturm",s.firestorm?s.explosionCount%skillValue("seraphine","firestorm",5,4)+" / "+skillValue("seraphine","firestorm",5,4):"nicht aktiv"],["Inferno",s.infernoActive>0?"aktiv":Math.ceil(s.infernoRemaining)+" s"]
+    ];
+  }
   const a=state.alchemist;
   return [
     ["Direktschaden",hudNumber(alchemistDamage())],["Feuerrate",hudNumber(state.weapon.shotsPerSecond*.9/2.7)+"×"],
@@ -232,12 +263,12 @@ function desktopHeroDetails(hero) {
 }
 function companionHudContent(side) {
   const label=side==="left"?"LINKS":"RECHTS";
-  const p=state.paladin,n=state.necromancer,a=state.alchemist,r=state.runemaster;
+  const p=state.paladin,n=state.necromancer,a=state.alchemist,r=state.runemaster,i=state.ilyra,s=state.seraphine;
   let title="",lines=[];
   if(p?.slot===side) {
     title="Aldric";
     lines=[
-      "Angriff "+hudNumber(paladinDirectDamage())+" · Rate "+hudNumber(state.weapon.shotsPerSecond*.65/2.7)+"×",
+      "Angriff "+hudNumber(paladinDirectDamage())+" · Rate "+hudNumber(state.weapon.shotsPerSecond*.75/2.7)+"×",
       "Krit "+hudNumber(state.weapon.critChance)+" % · Krit-Schaden "+hudNumber(state.weapon.critDamage)+" %",
       "Einschlag "+(p.hits%p.impactEvery)+"/"+p.impactEvery+" · Klinge "+(p.blade?(p.throws%p.bladeEvery)+"/"+p.bladeEvery:"gesperrt"),
       p.ultimate?"Urteil: "+(p.charge>0?"lädt":Math.ceil(p.remaining)+" s"):"Urteil: gesperrt"
@@ -271,8 +302,27 @@ function companionHudContent(side) {
       "Runenschlag "+Math.ceil(r.strikeRemaining)+" s · Sturm "+(r.storm?r.breakCount%5+"/5":"gesperrt"),
       r.ultimate?"Runenkreis: "+Math.ceil(r.ultimateRemaining)+" s":"Runenkreis: gesperrt"
     ];
+  } else if(i?.slot===side) {
+    title="Ilyra";
+    const instance=livingSnakeInstances().sort((x,y)=>ilyraSnakeSlow(y)-ilyraSnakeSlow(x))[0];
+    lines=[
+      "Angriff "+hudNumber(ilyraDirectDamage())+" · Rate "+hudNumber(ilyraRateMultiplier())+"×",
+      "Krit "+hudNumber(state.weapon.critChance)+" % · Krit-Schaden "+hudNumber(state.weapon.critDamage)+" %",
+      "Frost "+state.snake.reduce((sum,s)=>sum+frostStacks(s),0)+" · Ziel "+ilyraFrostGoal()+" Stapel · Slow "+hudNumber(ilyraSnakeSlow(instance)*100)+" %",
+      "Frostnova "+Math.ceil(i.novaRemaining)+" s · Eisbrüche "+i.icebreakCount,
+      i.nullPoint?(i.winterActive>0?"Winterstille: aktiv":"Winterstille: "+Math.ceil(i.winterRemaining)+" s"):"Winterstille: gesperrt"
+    ];
+  } else if(s?.slot===side) {
+    title="Seraphine";
+    lines=[
+      "Angriff "+hudNumber(seraphineDirectDamage())+" · Rate "+hudNumber(seraphineRateMultiplier())+"×",
+      "Krit "+hudNumber(state.weapon.critChance)+" % · Krit-Schaden "+hudNumber(state.weapon.critDamage)+" %",
+      "Brand "+state.snake.reduce((sum,segment)=>sum+burnStacks(segment),0)+" · Ziel "+seraphineThreshold()+" Stapel · "+hudNumber(s.burnDps)+"/s",
+      "Feuerwelle "+(s.waveRemaining===0?"bereit":Math.ceil(s.waveRemaining)+" s")+" · Explosionen "+s.explosionCount,
+      s.infernoActive>0?"Inferno: aktiv":"Inferno: "+Math.ceil(s.infernoRemaining)+" s"
+    ];
   }
-  const hero=p?.slot===side?"paladin":n?.slot===side?"necromancer":a?.slot===side?"alchemist":r?.slot===side?"runemaster":null;
+  const hero=p?.slot===side?"paladin":n?.slot===side?"necromancer":a?.slot===side?"alchemist":r?.slot===side?"runemaster":i?.slot===side?"ilyra":s?.slot===side?"seraphine":null;
   return "<strong>"+label+" · "+(title||"Frei")+"</strong><div class=\"platform-compact\">"+
     (title?lines.map(line=>"<span>"+line+"</span>").join(""):"<span>Kein Held ausgerüstet</span>")+"</div>"+(hero?desktopHeroDetails(hero):"");
 }

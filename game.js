@@ -25,6 +25,10 @@ const alchemistSprite = new Image();
 alchemistSprite.src = "selvara-front.png?v=18-2";
 const runemasterSprite = new Image();
 runemasterSprite.src = "kaelvar-front.png?v=19-0";
+const ilyraSprite = new Image();
+ilyraSprite.src = "ilyra-front.png?v=22-0";
+const seraphineSprite = new Image();
+seraphineSprite.src = "seraphine-front.png?v=23-0";
 const hammerSprite = new Image();
 hammerSprite.src = "holy-hammer.png";
 // Keep only the 32px centre platform in bounds; side companions may overhang.
@@ -40,6 +44,37 @@ const progress = SnakeProgress.open({
   setItem: (key, value) => window.localStorage.setItem(key, value)
 });
 
+const HALLOWEEN_THEME_KEY="the-snake.theme.halloween";
+function isHalloweenSeason(date=new Date()) {
+  return date.getMonth()===9||(date.getMonth()===10&&date.getDate()<=2);
+}
+function halloweenThemeMode() {
+  try {const mode=window.localStorage.getItem(HALLOWEEN_THEME_KEY);return ["auto","on","off"].includes(mode)?mode:"auto";}
+  catch {return "auto";}
+}
+function halloweenThemeActive(date=new Date(),mode=halloweenThemeMode()) {
+  return mode==="on"||(mode==="auto"&&isHalloweenSeason(date));
+}
+function applyHalloweenTheme(date=new Date()) {
+  const mode=halloweenThemeMode(),active=halloweenThemeActive(date,mode),root=document.documentElement,body=document.body;
+  for(const target of [root,body])if(target?.classList)target.classList[active?"add":"remove"]("halloween-theme");
+  const select=document.querySelector("#halloweenThemeMode");if(select)select.value=mode;
+  const status=document.querySelector("#halloweenThemeStatus");
+  if(status)status.textContent=active?(mode==="auto"?"Halloween ist aufgrund des Gerätedatums automatisch aktiv.":"Halloween ist dauerhaft eingeschaltet."):(mode==="off"?"Halloween ist ausgeschaltet.":"Halloween wird am 1. Oktober automatisch aktiviert.");
+  const themeColor=document.querySelector('meta[name="theme-color"]');if(themeColor)themeColor.content=active?"#140923":"#07131b";
+  return active;
+}
+function setHalloweenThemeMode(mode,date=new Date()) {
+  if(!["auto","on","off"].includes(mode))return false;
+  try {window.localStorage.setItem(HALLOWEEN_THEME_KEY,mode);}catch{return false;}
+  applyHalloweenTheme(date);return true;
+}
+function bindHalloweenTheme() {
+  const select=document.querySelector("#halloweenThemeMode");
+  if(select)select.addEventListener("change",()=>setHalloweenThemeMode(select.value));
+  applyHalloweenTheme();
+}
+
 const state = {
   mode: "start",
   selectedLevel: progress.data.selectedLevel, level: 1,
@@ -53,16 +88,17 @@ const state = {
   bullets: [],
   particles: [],
   snake: [],
+  snakes: [],
   trail: [],
   headDistance: 0,
+  minimumLevelPathLength: 0,
   player: { x: 210, targetX: 210, y: 660, width: 34, height: 36, speed: 750 },
   weapon: { damage: 1, shotsPerSecond: 2.7, bullets: 1, spread: 0, pierce: 0, critChance: 0, critDamage: 150 },
   necromancer: null, souls: [], soulEffects: [], necroDeaths: [], paladin: null, holyEffects: [],
-  alchemist: null, runemaster: null, pendingUpgrades: 0, upgradeOfferId: 0,
-  runUpgradeHistory: {paladin:[],necromancer:[],alchemist:[],runemaster:[]},
-  pointerDown: false, keyboardLeft: false, keyboardRight: false,
-  isCustomRun: false, customLevel: null, customSnakeIndex: 0,
-  customPath: null, customPathLength: 0, customSpeed: 0, customObstacles: []
+  alchemist: null, runemaster: null, ilyra: null, ilyraDeaths: [], seraphine: null, seraphineDeaths: [], resolvingSeraphineDeaths:false, shooter: null, pendingUpgrades: 0, upgradeOfferId: 0,
+  runStartSegments: 100,
+  runUpgradeHistory: {shooter:[],paladin:[],necromancer:[],alchemist:[],runemaster:[],ilyra:[],seraphine:[]},
+  pointerDown: false, keyboardLeft: false, keyboardRight: false
 };
 
 const SNAKE_SCALE = .9;
@@ -72,14 +108,11 @@ const SEGMENT_HIT_RADIUS = 25;
 const UPGRADE_INTERVAL = 5;
 const SEGMENTS_PER_SNAKE = 100;
 
-const LEVELS=[{first:5,last:5500},{first:15,last:9000},{first:32,last:14500}];
-function segmentHpFromRange(first,last,index,count) {
-  if(count<=1)return first;
-  return Math.min(last-(count-1-index),Math.max(first+index,Math.round(first*(last/first)**(index/(count-1)))));
-}
+const LEVELS=LEVEL_DEFINITIONS.map(level=>level.hp);
 function levelSegmentHp(level,index,count) {
   const {first,last}=LEVELS[level-1];
-  return segmentHpFromRange(first,last,index,count);
+  if(count<=1)return first;
+  return Math.min(last-(count-1-index),Math.max(first+index,Math.round(first*(last/first)**(index/(count-1)))));
 }
 function difficultyMultiplier(difficulty=progress.data.difficulty) { return difficulty===.20?2:difficulty===.15?1.5:1; }
 function renderLevelPicker() {
@@ -89,14 +122,15 @@ function renderLevelPicker() {
   document.querySelector("#rewardInfo").textContent="Münzen: "+level*multiplier+" / "+level*5*multiplier+" pro Segment · Abschluss +"+level*50*multiplier+" · "+(progress.data.firstClears[key]?"Erstbonus erhalten":"Erstbonus +"+level*100*multiplier);
   const locked=level>progress.data.completedLevels+1;
   document.querySelector("#levelName").textContent="Level "+level+(locked?" · Gesperrt":level<=progress.data.completedLevels?" · Abgeschlossen":"");
-  document.querySelector("#levelInfo").textContent=locked?"Schließe zuerst Level "+(level-1)+" ab.":Math.round(config.first*multiplier)+"–"+Math.round(config.last*multiplier).toLocaleString("de-DE")+" Leben · 100 Segmente";
+  const snakeCount=levelDefinition(level).snakes.length;
+  document.querySelector("#levelInfo").textContent=locked?"Schließe zuerst Level "+(level-1)+" ab.":Math.round(config.first*multiplier)+"–"+Math.round(config.last*multiplier).toLocaleString("de-DE")+" Leben · 100 Segmente · "+snakeCount+" "+(snakeCount===1?"Schlange":"Schlangen");
   document.querySelector("#previousLevel").disabled=level===1;
-  document.querySelector("#nextLevel").disabled=level===3;
+  document.querySelector("#nextLevel").disabled=level===LEVELS.length;
   document.querySelector("#startButton").disabled=locked;
 }
 function changeLevel(delta) {
   if(state.mode!=="start")return;
-  state.selectedLevel=Math.max(1,Math.min(3,state.selectedLevel+delta));
+  state.selectedLevel=Math.max(1,Math.min(LEVELS.length,state.selectedLevel+delta));
   if(state.selectedLevel<=progress.data.completedLevels+1){
     progress.data.selectedLevel=state.selectedLevel;progress.save();
   }
@@ -105,15 +139,6 @@ function changeLevel(delta) {
 function completeLevel() {
   if(state.mode!=="playing"||state.snake.length)return;
   releaseDrag();state.mode="victory";state.pendingUpgrades=0;
-  if(state.isCustomRun){
-    upgradeScreen.classList.add("hidden");
-    document.querySelector("#resultEyebrow").textContent="TESTLEVEL ABGESCHLOSSEN";
-    document.querySelector("#resultTitle").textContent=state.customLevel.name+" geschafft!";
-    document.querySelector("#runSummary").textContent="Alle "+state.customLevel.snakes.length+" Schlangen wurden besiegt · Testläufe vergeben keine Münzen.";
-    finalScore.textContent=state.score;
-    gameOverScreen.classList.remove("hidden");refreshHud();
-    return;
-  }
   state.score+=500;progress.data.best=Math.max(progress.data.best,state.score);
   const multiplier=difficultyMultiplier(state.runDifficulty);
   const key=(state.level-1)*3+[.10,.15,.20].indexOf(state.runDifficulty);
@@ -124,7 +149,7 @@ function completeLevel() {
   upgradeScreen.classList.add("hidden");
   document.querySelector("#resultEyebrow").textContent="SCHLANGE BESIEGT";
   document.querySelector("#resultTitle").textContent="Level "+state.level+" abgeschlossen!";
-  document.querySelector("#runSummary").textContent=Math.floor(state.runCoins)+" Münzen verdient · Abschluss +"+completionCoins+(firstCoins?" · Erstabschluss +"+firstCoins:"")+" · "+(state.level<3?"Level "+(state.level+1)+" freigeschaltet":"Alle drei Level abgeschlossen");
+  document.querySelector("#runSummary").textContent=Math.floor(state.runCoins)+" Münzen verdient · Abschluss +"+completionCoins+(firstCoins?" · Erstabschluss +"+firstCoins:"")+" · "+(state.level<LEVELS.length?"Level "+(state.level+1)+" freigeschaltet":"Alle zehn Level abgeschlossen");
   finalScore.textContent=state.score;
   gameOverScreen.classList.remove("hidden");renderProfile();refreshHud();
 }
@@ -140,7 +165,6 @@ function resizeCanvas() {
   state.player.y = rect.height - 50;
   state.player.x = clampPlayerX(state.player.x);
   state.player.targetX = state.player.x;
-  if(state.isCustomRun && state.customLevel) prepareCustomGeometry();
 }
 
 function resetGame() {
@@ -152,10 +176,13 @@ function resetGame() {
   state.necromancer = newNecromancer(progress.data.necromancerSlot);
   state.alchemist = newAlchemist(progress.data.alchemistSlot);
   state.runemaster = newRunemaster(progress.data.runemasterSlot);
-  state.souls=[]; state.soulEffects=[]; state.necroDeaths=[];
+  state.ilyra = newIlyra(progress.data.ilyraSlot);
+  state.seraphine = newSeraphine(progress.data.seraphineSlot);
+  state.shooter = newShooter();
+  state.souls=[]; state.soulEffects=[]; state.necroDeaths=[]; state.ilyraDeaths=[]; state.seraphineDeaths=[]; state.resolvingSeraphineDeaths=false;
   state.holyEffects = [];
   state.pendingUpgrades = 0;
-  state.runUpgradeHistory = {paladin:[],necromancer:[],alchemist:[],runemaster:[]};
+  state.runUpgradeHistory = {shooter:[],paladin:[],necromancer:[],alchemist:[],runemaster:[],ilyra:[],seraphine:[]};
   state.keyboardLeft = false; state.keyboardRight = false;
   state.lastUpgrade=null;
   state.score = 0;
@@ -169,29 +196,20 @@ function resetGame() {
   state.player.x = state.width / 2;
   state.player.targetX = state.player.x;
   state.weapon = { damage: 1 + progress.data.damageLevel, shotsPerSecond: 2.7 * (1 + progress.data.rateLevel * .10), bullets: 1, spread: 0, pierce: 0, critChance: progress.data.critChanceLevel, critDamage: 150 + 25 * progress.data.critDamageLevel };
-  if(state.isCustomRun && state.customLevel){
-    state.customSnakeIndex=0;
-    prepareCustomObstacles();
-    spawnCustomSnake(0);
-  } else {
-    headSprite.src="snake-head.png";bodySprite.src="snake-body.png";
-    state.customObstacles=[];state.customPath=null;
-    createSnake(SEGMENTS_PER_SNAKE);
-  }
+  createLevelSnakes(state.level,SEGMENTS_PER_SNAKE);
+  state.runStartSegments=state.snake.length;
+  document.querySelector("#shareRunStatus").textContent="";
   refreshHud();
 }
 
-function createSnake(count, customOffset=0, customTotal=count) {
-  state.snake = [];
+function createSnake(count) {
+  state.snake = [];state.snakes=[];
   for (let i = 0; i < count; i++) {
-    const absoluteIndex=customOffset+i;
-    const upgrade = absoluteIndex === 1 || (absoluteIndex > 1 && (absoluteIndex - 1) % UPGRADE_INTERVAL === 0);
-    const baseHp=state.isCustomRun
-      ? segmentHpFromRange(state.customLevel.firstHp,state.customLevel.lastHp,absoluteIndex,customTotal)
-      : levelSegmentHp(state.level,i,count);
-    const scaledHp = Math.round(baseHp*difficultyMultiplier(state.runDifficulty??.10));
+    const upgrade = i === 1 || (i > 1 && (i - 1) % UPGRADE_INTERVAL === 0);
+    const scaledHp = Math.round(levelSegmentHp(state.level,i,count)*difficultyMultiplier(state.runDifficulty??.10));
     state.snake.push({
       id: state.nextId++,
+      snakeId: "A",
       pathOffset: (i + 1) * SEGMENT_SPACING,
       upgrade,
       hp: scaledHp,
@@ -202,68 +220,49 @@ function createSnake(count, customOffset=0, customTotal=count) {
   }
 }
 
-function customScale() {
-  const level=state.customLevel;
-  return {x:state.width/level.width,y:state.height/level.height};
+function createLevelSnakes(levelNumber,totalCount=SEGMENTS_PER_SNAKE) {
+  const definition=levelDefinition(levelNumber),minimum=level1ReferenceLength(state.width,state.height,state.player.y);
+  state.minimumLevelPathLength=minimum;state.snakes=[];state.snake=[];
+  const baseCount=Math.floor(totalCount/definition.snakes.length),extra=totalCount%definition.snakes.length;
+  let ordinal=0;
+  definition.snakes.forEach((snakeDefinition,index)=>{
+    const count=baseCount+(index<extra?1:0);
+    const instance={id:snakeDefinition.id,definition:snakeDefinition,segments:[],headDistance:0,rageActive:false,
+      path:buildLevelPath(snakeDefinition.path,state.width,state.height,minimum)};
+    for(let localIndex=0;localIndex<count;localIndex++,ordinal++){
+      const upgrade=ordinal===1||(ordinal>1&&(ordinal-1)%UPGRADE_INTERVAL===0);
+      // Every snake receives the complete level curve independently. In
+      // multi-snake encounters every enemy therefore starts at the configured
+      // minimum and reaches the configured maximum at its own final segment.
+      const scaledHp=Math.round(levelSegmentHp(levelNumber,localIndex,count)*difficultyMultiplier(state.runDifficulty??.10));
+      instance.segments.push({id:state.nextId++,snakeId:instance.id,pathOffset:(localIndex+1)*SEGMENT_SPACING,
+        upgrade,hp:scaledHp,maxHp:scaledHp,x:state.width/2,y:-40-localIndex*SEGMENT_SPACING});
+    }
+    state.snakes.push(instance);
+  });
+  rebuildSnakeView();syncSnakePositions();
 }
 
-function prepareCustomGeometry() {
-  if(!state.isCustomRun||!state.customLevel)return;
-  const snake=state.customLevel.snakes[state.customSnakeIndex];
-  if(!snake)return;
-  const scale=customScale();
-  state.customSpeed=snake.speed*((scale.x+scale.y)/2);
-  state.customPath=snake.waypoints.length>=2
-    ? snake.waypoints.map(point=>({x:Math.max(20,Math.min(state.width-20,point.x*scale.x)),y:point.y*scale.y}))
-    : null;
-  // An unfinished editor path must not send the snake horizontally out of the
-  // arena. Continue vertically from its final waypoint to the danger line.
-  if(state.customPath&&state.customPath.at(-1).y<state.player.y-45){
-    const last=state.customPath.at(-1);
-    state.customPath.push({x:last.x,y:state.player.y-20});
-  }
-  state.customPathLength=state.customPath?state.customPath.slice(1).reduce((sum,point,index)=>sum+Math.hypot(point.x-state.customPath[index].x,point.y-state.customPath[index].y),0):0;
-  state.customObstacles=state.customLevel.obstacles.map(obstacle=>({
-    ...obstacle,x:obstacle.x*scale.x,y:obstacle.y*scale.y,width:obstacle.width*scale.x,height:obstacle.height*scale.y,
-    image:obstacle.image
-  }));
+function managedSnakeInstances() {
+  if(!state.snakes?.length)return [];
+  const segments=state.snakes.flatMap(s=>s.segments);
+  return segments.length===state.snake.length&&segments.every((segment,index)=>state.snake[index]===segment)?state.snakes:[];
 }
-
-function prepareCustomObstacles() {
-  for(const obstacle of state.customLevel.obstacles){
-    if(!obstacle.png){obstacle.image=null;continue;}
-    const image=new Image();image.src=obstacle.png;obstacle.image=image;
-  }
-  prepareCustomGeometry();
+function rebuildSnakeView(){state.snake=state.snakes.flatMap(s=>s.segments);}
+function snakeInstanceForSegment(segment){
+  return managedSnakeInstances().find(s=>s.segments.includes(segment))||null;
 }
-
-function spawnCustomSnake(index) {
-  const level=state.customLevel,snake=level.snakes[index];
-  if(!snake)return false;
-  state.customSnakeIndex=index;
-  state.headDistance=0;
-  headSprite.src=snake.headPng;bodySprite.src=snake.bodyPng;
-  prepareCustomGeometry();
-  const offset=level.snakes.slice(0,index).reduce((sum,entry)=>sum+entry.segments,0);
-  const total=level.snakes.reduce((sum,entry)=>sum+entry.segments,0);
-  createSnake(snake.segments,offset,total);
-  if(state.pendingUpgrades>0&&state.mode==="playing")openUpgrade();
-  return true;
-}
-
-function advanceCustomSnake() {
-  if(!state.isCustomRun||state.snake.length)return false;
-  return spawnCustomSnake(state.customSnakeIndex+1);
+function livingSnakeInstances(){
+  const managed=managedSnakeInstances();
+  return managed.length?managed.filter(s=>s.segments.some(segment=>segment.hp>0)):[{id:"legacy",segments:state.snake,headDistance:state.headDistance,path:{level1:true}}];
 }
 
 function startGame() {
-  if(!state.isCustomRun){
-    if(state.selectedLevel>progress.data.completedLevels+1)return;
-    progress.data.selectedLevel=state.selectedLevel;
-    progress.data.runs = Math.min(1000000000, progress.data.runs + 1);
-    progress.save();
-    renderProfile();
-  }
+  if(state.selectedLevel>progress.data.completedLevels+1)return;
+  progress.data.selectedLevel=state.selectedLevel;
+  progress.data.runs = Math.min(1000000000, progress.data.runs + 1);
+  progress.save();
+  renderProfile();
   resetGame();
   state.mode = "playing";
   state.lastTime = performance.now();
@@ -272,7 +271,6 @@ function startGame() {
 }
 
 function pathPoint(distance) {
-  if(state.isCustomRun && state.customPath) return customPathPoint(distance);
   const radius = 26 * SNAKE_SCALE;
   const left = 54;
   const right = Math.max(left + 20, state.width - 54);
@@ -295,58 +293,77 @@ function pathPoint(distance) {
   };
 }
 
-function customPathPoint(distance) {
-  const path=state.customPath;
-  if(!path || path.length<2)return {x:state.width/2,y:distance,angle:Math.PI/2};
-  let remaining=distance;
-  if(remaining<0){
-    const a=path[0],b=path[1],angle=Math.atan2(b.y-a.y,b.x-a.x);
-    return {x:a.x+Math.cos(angle)*remaining,y:a.y+Math.sin(angle)*remaining,angle};
-  }
-  for(let i=1;i<path.length;i++){
-    const a=path[i-1],b=path[i],length=Math.hypot(b.x-a.x,b.y-a.y)||1;
-    if(remaining<=length){
-      const ratio=remaining/length,angle=Math.atan2(b.y-a.y,b.x-a.x);
-      return {x:a.x+(b.x-a.x)*ratio,y:a.y+(b.y-a.y)*ratio,angle};
-    }
-    remaining-=length;
-  }
-  const a=path[path.length-2],b=path[path.length-1],angle=Math.atan2(b.y-a.y,b.x-a.x);
-  return {x:b.x+Math.cos(angle)*remaining,y:b.y+Math.sin(angle)*remaining,angle};
+function instancePathPoint(instance,distance) {
+  return instance?.path&&!instance.path.level1?pointOnSampledPath(instance.path,distance):pathPoint(distance);
 }
-
-function snakeHead() {
-  if (!state.snake.length) return null;
-  return pathPoint(state.headDistance - state.snake[0].pathOffset + SEGMENT_SPACING);
+function snakeHead(instance=null) {
+  const selected=instance||livingSnakeInstances()[0];
+  if (!selected?.segments.length) return null;
+  return instancePathPoint(selected,(selected.headDistance??state.headDistance)-selected.segments[0].pathOffset+SEGMENT_SPACING);
 }
+function snakeHeadForSegment(segment){
+  const instance=snakeInstanceForSegment(segment);
+  if(instance)return instance.segments[0]===segment?snakeHead(instance):null;
+  return state.snake[0]===segment?snakeHead():null;
+}
+function isFrontSegment(segment){
+  const instance=snakeInstanceForSegment(segment);
+  return instance?instance.segments[0]===segment:state.snake[0]===segment;
+}
+function firstVisibleSegment(instance){return instance?.segments.find(segment=>segment.hp>0&&isSegmentVisible(segment))||null;}
+function nearestSnakeSegment(originX,originY,predicate=()=>true,preferredId=null){
+  if(preferredId!=null){const preferred=state.snake.find(s=>s.id===preferredId&&s.hp>0&&isSegmentVisible(s));if(preferred)return preferred;}
+  const candidates=[];
+  for(const instance of livingSnakeInstances()){
+    const target=instance.segments.find(segment=>segment.hp>0&&isSegmentVisible(segment)&&predicate(segment));if(!target)continue;
+    const head=snakeHead(instance),reference=head&&isSegmentVisible(head)?head:target;
+    candidates.push({target,distance:Math.hypot(reference.x-originX,reference.y-originY)});
+  }
+  return candidates.sort((a,b)=>a.distance-b.distance)[0]?.target||null;
+}
+function nearestSnakeTarget(originX,originY,preferredId=null){return nearestSnakeSegment(originX,originY,()=>true,preferredId);}
 
 function syncSnakePositions() {
-  for (const segment of state.snake) {
-    Object.assign(segment, pathPoint(state.headDistance - segment.pathOffset));
+  const instances=managedSnakeInstances();
+  if(!instances.length){for(const segment of state.snake)Object.assign(segment,pathPoint(state.headDistance-segment.pathOffset));return;}
+  for(const instance of instances)for(const segment of instance.segments){
+    Object.assign(segment,instancePathPoint(instance,instance.headDistance-segment.pathOffset));
   }
+}
+
+function snakeSpeedMultiplier(instance,elapsed=state.elapsed) {
+  const definition=instance?.definition||{},rage=definition.rage;
+  if(!rage){if(instance)instance.rageActive=false;return definition.speedMultiplier??1;}
+  const active=elapsed>=rage.interval&&((elapsed-rage.interval)%rage.interval)<rage.duration;
+  instance.rageActive=active;
+  return (definition.speedMultiplier??1)*(active?rage.multiplier:1);
 }
 
 function update(dt) {
   if (state.mode !== "playing") return;
-  if(!state.snake.length){if(advanceCustomSnake())return;completeLevel();return;}
+  if(!state.snake.length){completeLevel();return;}
   state.elapsed += dt;
   // Die Schlange beginnt langsamer und beschleunigt nur behutsam.
-  const speed = (state.isCustomRun?state.customSpeed:Math.min(22 + state.elapsed * .25, 45)) * (1-alchemistSlow());
-  state.headDistance += speed * dt;
+  const baseSpeed = Math.min(22 + state.elapsed * .25, 45);
+  const instances=managedSnakeInstances();
+  if(instances.length){for(const instance of instances){const slow=Math.min(.60,alchemistSlow()+ilyraSnakeSlow(instance));instance.headDistance+=baseSpeed*(1-slow)*snakeSpeedMultiplier(instance)*dt;}state.headDistance=instances[0]?.headDistance||0;}
+  else state.headDistance += baseSpeed*(1-Math.min(.60,alchemistSlow()+ilyraSnakeSlow(null))) * dt;
 
   syncSnakePositions();
 
   const keyboardDirection=(state.keyboardRight?1:0)-(state.keyboardLeft?1:0);
   if(keyboardDirection)state.player.targetX=clampPlayerX(state.player.targetX+keyboardDirection*state.player.speed*dt);
+  const playerBeforeX=state.player.x;
   const dx = state.player.targetX - state.player.x;
   const maxStep = state.player.speed * dt;
   state.player.x += Math.sign(dx) * Math.min(Math.abs(dx), maxStep);
   state.player.x = clampPlayerX(state.player.x);
+  updateShooter(dt,Math.abs(state.player.x-playerBeforeX)>.001);
 
   state.fireTimer -= dt;
   if (state.fireTimer <= 0) {
     fireWeapon();
-    state.fireTimer += 1 / state.weapon.shotsPerSecond;
+    state.fireTimer += 1 / (state.weapon.shotsPerSecond*shooterRateMultiplier());
   }
 
   updatePaladin(dt);
@@ -357,6 +374,10 @@ function update(dt) {
   if (state.mode !== "playing") return;
   updateRunemaster(dt);
   if (state.mode !== "playing") return;
+  updateIlyra(dt);
+  if (state.mode !== "playing") return;
+  updateSeraphine(dt);
+  if (state.mode !== "playing") return;
   for (const effect of state.holyEffects) effect.life -= dt;
   state.holyEffects = state.holyEffects.filter(effect => effect.life > 0);
   refreshPaladinHud();
@@ -365,8 +386,8 @@ function update(dt) {
     bullet.previousY = bullet.y;
     if(bullet.owner==="paladin" && bullet.hammerPhase)advanceHammer(bullet,dt);
     else if(bullet.owner==="necromancer") {
-      const target=state.snake[0];
-      if(target)moveHeroProjectile(bullet,target.x,target.y,510*.9,dt);
+      const target=nearestSnakeTarget(bullet.x,bullet.y,bullet.targetId);
+      if(target){bullet.targetId=target.id;moveHeroProjectile(bullet,target.x,target.y,510*.9,dt);}
       else bullet.dead=true;
     } else if(bullet.owner==="alchemist") {
       const target=alchemistProjectileTarget(bullet);
@@ -376,12 +397,15 @@ function update(dt) {
       const target=runemasterTarget(bullet.targetId);
       if(target){bullet.targetId=target.id;moveHeroProjectile(bullet,target.x,target.y,510,dt);}
       else bullet.dead=true;
+    } else if(bullet.owner==="shooter"&&bullet.shooterHoming){
+      const target=nearestSnakeTarget(bullet.x,bullet.y,bullet.targetId);
+      if(target){bullet.targetId=target.id;moveHeroProjectile(bullet,target.x,target.y,510*shooterProjectileSpeedMultiplier(),dt);}
+      else bullet.dead=true;
     } else {
       bullet.x += bullet.vx * dt;
       bullet.y += bullet.vy * dt;
     }
   }
-  blockProjectilesAtObstacles();
   handleHits();
   for(const bullet of state.bullets)if(bullet.returnAfterHits){bullet.hammerPhase="return";bullet.returnAfterHits=false;}
   state.bullets = state.bullets.filter(b => b.y > -25 && !b.dead);
@@ -395,22 +419,14 @@ function update(dt) {
   state.particles = state.particles.filter(p => p.life > 0);
 
   if (state.snake.length === 0) {
-    if(!advanceCustomSnake())completeLevel();
-  } else if (snakeHead().y + SEGMENT_RADIUS * SNAKE_SCALE >= state.player.y - 22) {
+    completeLevel();
+  } else if (livingSnakeInstances().some(instance=>snakeHead(instance)?.y + SEGMENT_RADIUS * SNAKE_SCALE >= state.player.y - 22)) {
     endGame();
   }
 }
 
 function fireWeapon() {
-  const count = state.weapon.bullets;
-  for (let i = 0; i < count; i++) {
-    const offset = (i - (count - 1) / 2) * state.weapon.spread;
-    const spacing = count > 1 ? Math.min(10, (state.width - 12) / (count - 1)) : 0;
-    const halfWidth = (count - 1) * spacing / 2;
-    const center = Math.max(6 + halfWidth, Math.min(state.width - 6 - halfWidth, state.player.x));
-    const x = state.weapon.parallel ? center + (i - (count - 1) / 2) * spacing : state.player.x;
-    state.bullets.push({ x, y: state.player.y + PLATFORM_SHOT_Y, vx: state.weapon.parallel ? 0 : offset * 3, vy: -510*(state.weapon.parallel?skillValue("shooter","parallel",1,1.2):1), hitsLeft: state.weapon.pierce + 1, dead: false });
-  }
+  fireShooterWeapon();
 }
 
 function rollHit(random = Math.random, damage = state.weapon.damage) {
@@ -423,38 +439,8 @@ function projectileHits(bullet, target) {
   const ax = bullet.previousX ?? bullet.x, ay = bullet.previousY ?? bullet.y;
   const dx = bullet.x-ax, dy = bullet.y-ay;
   const t = dx*dx+dy*dy ? Math.max(0,Math.min(1,((target.x-ax)*dx+(target.y-ay)*dy)/(dx*dx+dy*dy))) : 0;
-  const radius = SEGMENT_HIT_RADIUS + (bullet.owner === "paladin" ? 2 * (bullet.size || 1.4) : 0);
+  const radius = SEGMENT_HIT_RADIUS + (bullet.owner === "paladin" ? 2 * (bullet.size || 1.4) : ["shooter","ilyra","seraphine"].includes(bullet.owner)?3*Math.max(0,(bullet.size||1)-1):0);
   return Math.hypot(target.x-ax-t*dx,target.y-ay-t*dy) < radius;
-}
-function projectileObstacleHit(bullet,obstacle) {
-  const radius=bullet.owner==="paladin"?Math.max(4,6*(bullet.size||1.4)):bullet.owner==="alchemist"||bullet.owner==="runemaster"?5:bullet.owner==="necromancer"?4:3;
-  const left=obstacle.x-obstacle.width/2-radius,right=obstacle.x+obstacle.width/2+radius;
-  const top=obstacle.y-obstacle.height/2-radius,bottom=obstacle.y+obstacle.height/2+radius;
-  const ax=bullet.previousX??bullet.x,ay=bullet.previousY??bullet.y;
-  const dx=bullet.x-ax,dy=bullet.y-ay;
-  let near=0,far=1;
-  for(const [start,delta,min,max] of [[ax,dx,left,right],[ay,dy,top,bottom]]){
-    if(Math.abs(delta)<1e-9){if(start<min||start>max)return null;continue;}
-    let enter=(min-start)/delta,exit=(max-start)/delta;
-    if(enter>exit)[enter,exit]=[exit,enter];
-    near=Math.max(near,enter);far=Math.min(far,exit);
-    if(near>far)return null;
-  }
-  return {x:ax+dx*near,y:ay+dy*near,t:near};
-}
-function blockProjectilesAtObstacles() {
-  if(!state.isCustomRun||!state.customObstacles.length)return;
-  for(const bullet of state.bullets){
-    if(bullet.dead)continue;
-    let first=null;
-    for(const obstacle of state.customObstacles){
-      const hit=projectileObstacleHit(bullet,obstacle);
-      if(hit&&(!first||hit.t<first.t))first=hit;
-    }
-    if(!first)continue;
-    bullet.dead=true;bullet.x=first.x;bullet.y=first.y;
-    burst(first.x,first.y,"#d6c091",5);
-  }
 }
 function segmentDamageMultiplier(segment) {
   const curse=segment.soulMark ? 1 + (state.necromancer?.curse || 0) : 1;
@@ -467,6 +453,9 @@ function applyDamageBatch(batch) {
     if (isSegmentVisible(segment) && batch.has(segment.id)) segment.hp = Math.round((segment.hp-batch.get(segment.id)*segmentDamageMultiplier(segment))*1e10)/1e10;
   }
   for (let i=state.snake.length-1;i>=0;i--) if (state.snake[i].hp<=0) destroySegment(i,false);
+  for(const segment of state.snake)delete segment.seraphineExplosionDeath;
+  resolveIlyraDeaths();
+  resolveSeraphineDeaths();
   resolveNecroDeaths();
   if (state.snake.length && state.pendingUpgrades>0 && state.mode === "playing") openUpgrade();
 }
@@ -475,8 +464,8 @@ function handleHits(random = Math.random) {
     if (bullet.dead || bullet.hammerPhase==="return") continue;
     bullet.hitIds ||= new Set();
     // Projectiles enter from below: resolve the nearest crossed target first.
-    const targets = state.snake.map((segment,i)=>({segment,head:i===0?snakeHead():null}))
-      .filter(({segment,head})=>isSegmentVisible(segment) && (bullet.owner!=="necromancer" || segment===state.snake[0]) && (bullet.owner!=="alchemist" || segment.id===bullet.targetId) && (bullet.owner!=="runemaster" || segment.id===bullet.targetId) && !bullet.hitIds.has(segment.id) && (projectileHits(bullet,segment) || (head && projectileHits(bullet,head))))
+    const targets = state.snake.map(segment=>({segment,head:snakeHeadForSegment(segment)}))
+      .filter(({segment,head})=>isSegmentVisible(segment) && (bullet.owner!=="necromancer" || (bullet.targetId!=null?segment.id===bullet.targetId:isFrontSegment(segment))) && (bullet.owner!=="alchemist" || segment.id===bullet.targetId) && (bullet.owner!=="runemaster" || segment.id===bullet.targetId) && !bullet.hitIds.has(segment.id) && (projectileHits(bullet,segment) || (head && projectileHits(bullet,head))))
       .sort((a,b)=>Math.max(b.segment.y,b.head?.y??-Infinity)-Math.max(a.segment.y,a.head?.y??-Infinity));
     for (const {segment} of targets) {
       if (!state.snake.includes(segment)) continue;
@@ -485,6 +474,8 @@ function handleHits(random = Math.random) {
       const isNecro = bullet.owner === "necromancer" && state.necromancer;
       const isAlchemist = bullet.owner === "alchemist" && state.alchemist;
       const isRunemaster = bullet.owner === "runemaster" && state.runemaster;
+      const isIlyra = bullet.owner === "ilyra" && state.ilyra;
+      const isSeraphine = bullet.owner === "seraphine" && state.seraphine;
       if(isAlchemist){
         const hit=alchemistHitRoll(random);bullet.dead=true;bullet.hitIds.add(segment.id);
         alchemistHit(segment,hit,bullet,random);
@@ -498,10 +489,27 @@ function handleHits(random = Math.random) {
         if(state.mode!=="playing")return;
         continue outer;
       }
-      const hit = isNecro ? necromancerHitRoll(random) : rollHit(random,isPaladin ? paladinDirectDamage(bullet) : state.weapon.damage*skillValue("shooter","attack",1,1.2));
+      if(isIlyra){
+        const hit=ilyraHitRoll(segment,bullet,random);bullet.hitsLeft--;if(bullet.hitsLeft<=0)bullet.dead=true;
+        ilyraHit(segment,hit,bullet,random);burst(segment.x,segment.y,hit.critical?"#fff2b4":"#a9ecff",hit.critical?13:8);
+        if(state.mode!=="playing")return;
+        if(bullet.dead)continue outer;
+        continue;
+      }
+      if(isSeraphine){
+        const hit=bullet.fireWave?{critical:false,damage:0}:seraphineHitRoll(segment,bullet,random);bullet.hitsLeft--;if(bullet.hitsLeft<=0)bullet.dead=true;
+        seraphineHit(segment,hit,bullet,random);burst(segment.x,segment.y,hit.critical?"#fff0a6":"#ff7b32",hit.critical?13:8);
+        if(state.mode!=="playing")return;
+        if(bullet.dead)continue outer;
+        continue;
+      }
+      const isShooter=bullet.owner==="shooter"||!bullet.owner;
+      const hit = isNecro ? necromancerHitRoll(random) : isShooter&&state.shooter ? shooterHitRoll(segment,bullet,random) : rollHit(random,isPaladin ? paladinDirectDamage(bullet) : state.weapon.damage*skillValue("shooter","attack",1,1.2));
       if (isNecro) prepareNecroHit(segment,hit,random);
       const batch = new Map([[segment.id,hit.damage]]);
       if (isPaladin) paladinHit(batch,segment,hit,random);
+      if (isShooter&&state.shooter)shooterAfterHit(batch,segment,hit,bullet,random);
+      if(isShooter)bullet.hitsDone=(bullet.hitsDone||0)+1;
       bullet.hitsLeft--;
       if (bullet.hitsLeft<=0 || isNecro) bullet.dead=true;
       burst(segment.x,segment.y,hit.critical?"#ff7954":isPaladin?"#ffe49b":"#63ef98",hit.critical?12:5);
@@ -515,23 +523,34 @@ function handleHits(random = Math.random) {
 }
 
 function destroySegment(index, offerUpgrade = true) {
-  const [destroyed] = state.snake.splice(index, 1);
-  const neighbors=[state.snake[index-1],state.snake[index]].filter(Boolean);
+  const target=state.snake[index],instance=snakeInstanceForSegment(target);
+  let destroyed,neighbors,localIndex=index;
+  if(instance){
+    localIndex=instance.segments.indexOf(target);
+    [destroyed]=instance.segments.splice(localIndex,1);
+    neighbors=[instance.segments[localIndex-1],instance.segments[localIndex]].filter(Boolean);
+  }else{
+    [destroyed]=state.snake.splice(index,1);
+    neighbors=[state.snake[index-1],state.snake[index]].filter(Boolean);
+  }
+  if(!destroyed)return;
+  if(instance)rebuildSnakeView();
   if (state.runemaster) resolveRunemasterDeath(destroyed,neighbors);
   if (state.necromancer) state.necroDeaths.push({segment:destroyed,neighbors});
   if (state.alchemist) resolveAlchemistDeath(destroyed,neighbors);
+  if (state.ilyra) queueIlyraDeath(destroyed,instance);
+  if (state.seraphine) queueSeraphineDeath(destroyed,instance,neighbors);
   state.score += destroyed.upgrade ? 100 : 25;
-  if(!state.isCustomRun){
-    const coins = (destroyed.upgrade ? 5 : 1) * state.level * difficultyMultiplier(state.runDifficulty??.10);
-    state.runCoins += coins;
-    progress.reward(coins, state.score);
-  }
+  const coins = (destroyed.upgrade ? 5 : 1) * state.level * difficultyMultiplier(state.runDifficulty??.10);
+  state.runCoins += coins;
+  progress.reward(coins, state.score);
   document.querySelector("#saveStatus").textContent = progress.message + " · Touch: Wischen · PC: ← → oder A/D";
   burst(destroyed.x, destroyed.y, destroyed.upgrade ? "#ffe083" : "#75ffac", 16);
 
   // Nur der Abschnitt vor der Lücke (Richtung Kopf) fällt zurück.
   // Größere Pfad-Offsets bedeuten weiter hinten auf derselben Bahn.
-  for (let i = 0; i < index; i++) state.snake[i].pathOffset += SEGMENT_SPACING;
+  const retreat=instance?instance.segments:state.snake;
+  for (let i = 0; i < localIndex; i++) retreat[i].pathOffset += SEGMENT_SPACING;
   syncSnakePositions();
   refreshHud();
   if (destroyed.upgrade) {
@@ -540,7 +559,7 @@ function destroySegment(index, offerUpgrade = true) {
   }
 }
 
-function roundUpgradePool() {
+function roundUpgradePool(includeHeroes = true) {
   const pool = [
     { rarity: "grey", label: "Grau", damage: 1, rate: 10, pierce: 1 },
     { rarity: "green", label: "Grün", damage: 2, rate: 20, pierce: 2 },
@@ -591,23 +610,32 @@ function roundUpgradePool() {
       apply: () => { state.weapon.parallel = true; state.weapon.spread = 0; }
     });
   }
-  return pool.concat(paladinUpgradePool(),necromancerUpgradePool(),alchemistUpgradePool(),runemasterUpgradePool());
+  const standard=pool.concat(shooterUpgradePool());
+  return includeHeroes?standard.concat(paladinUpgradePool(),necromancerUpgradePool(),alchemistUpgradePool(),runemasterUpgradePool(),ilyraUpgradePool(),seraphineUpgradePool()):standard;
 }
 
 const RARITY_CHANCES = Object.freeze({grey:.60,green:.25,purple:.10,orange:.05});
+function takeWeightedUpgrade(remaining,random=Math.random) {
+  if(!remaining.length)return null;
+  const available=Object.keys(RARITY_CHANCES).filter(r=>remaining.some(c=>c.rarity===r));
+  const total=available.reduce((sum,r)=>sum+RARITY_CHANCES[r],0);
+  let roll=random()*total;
+  const rarity=available.find(r=>(roll-=RARITY_CHANCES[r])<0)||available[available.length-1];
+  const candidates=remaining.filter(c=>c.rarity===rarity);
+  const choice=candidates[Math.min(candidates.length-1,Math.floor(random()*candidates.length))];
+  remaining.splice(remaining.indexOf(choice),1);
+  return choice;
+}
 function chooseUpgrades(random = Math.random) {
   const remaining = roundUpgradePool(), choices=[];
   for (let i=0;i<3 && remaining.length;i++) {
-    // Only eligible rarities participate; missing/exhausted tiers redistribute
-    // proportionally. Orange unlock can appear once, without duplicate cards.
-    const available=Object.keys(RARITY_CHANCES).filter(r=>remaining.some(c=>c.rarity===r));
-    const total=available.reduce((sum,r)=>sum+RARITY_CHANCES[r],0);
-    let roll=random()*total;
-    const rarity=available.find(r=>(roll-=RARITY_CHANCES[r])<0) || available[available.length-1];
-    const candidates=remaining.filter(c=>c.rarity===rarity);
-    const choice=candidates[Math.min(candidates.length-1,Math.floor(random()*candidates.length))];
-    choices.push(choice);remaining.splice(remaining.indexOf(choice),1);
+    choices.push(takeWeightedUpgrade(remaining,random));
   }
+  // Slot four is deliberately isolated from all companion pools.
+  const used=new Set(choices.map(choice=>choice.rarity+"\u0000"+choice.name));
+  const standard=roundUpgradePool(false).filter(choice=>!used.has(choice.rarity+"\u0000"+choice.name));
+  const fourth=takeWeightedUpgrade(standard,random);
+  if(fourth)choices.push({...fourth,standardSlot:true});
   return choices;
 }
 
@@ -619,7 +647,7 @@ function openUpgrade() {
   upgradeChoices.replaceChildren();
   for (const choice of choices) {
     const button = document.createElement("button");
-    button.className = "upgrade-choice rarity-" + choice.rarity;
+    button.className = "upgrade-choice rarity-" + choice.rarity+(choice.standardSlot?" standard-upgrade-slot":"");
     button.innerHTML = `${choice.name}<span>${choice.text}</span>`;
     button.addEventListener("click", () => {
       if (state.mode !== "upgrade" || state.upgradeOfferId !== offerId) return;
@@ -640,9 +668,9 @@ function openUpgrade() {
 }
 
 function recordRunUpgrade(choice) {
-  const hero=choice.text.startsWith("Aldric ·")?"paladin":choice.text.startsWith("Vaelric ·")?"necromancer":choice.text.startsWith("Selvara ·")?"alchemist":choice.text.startsWith("Kaelvar ·")?"runemaster":null;
+  const hero=choice.text.startsWith("Schütze ·")?"shooter":choice.text.startsWith("Aldric ·")?"paladin":choice.text.startsWith("Vaelric ·")?"necromancer":choice.text.startsWith("Selvara ·")?"alchemist":choice.text.startsWith("Kaelvar ·")?"runemaster":choice.text.startsWith("Ilyra ·")?"ilyra":choice.text.startsWith("Seraphine ·")?"seraphine":null;
   if(!hero)return;
-  const text=choice.text.replace(/^(Aldric|Vaelric|Selvara|Kaelvar) · /,"");
+  const text=choice.text.replace(/^(Schütze|Aldric|Vaelric|Selvara|Kaelvar|Ilyra|Seraphine) · /,"");
   state.runUpgradeHistory[hero].push({name:choice.name,rarity:choice.rarity,text});
 }
 
@@ -661,15 +689,44 @@ function endGame() {
   state.mode = "gameover";
   document.querySelector("#resultEyebrow").textContent="DIE SCHLANGE WAR SCHNELLER";
   document.querySelector("#resultTitle").textContent="Game Over";
-  if(state.isCustomRun){
-    document.querySelector("#runSummary").textContent = "Testlauf beendet · keine Münzen oder Freischaltungen verändert";
-  }else{
-    progress.data.best = Math.max(progress.data.best, state.score);
-    progress.save();renderProfile();
-    document.querySelector("#runSummary").textContent = Math.floor(state.runCoins) + " Münzen verdient · bleiben erhalten";
-  }
+  progress.data.best = Math.max(progress.data.best, state.score);
+  progress.save();
+  renderProfile();
+  document.querySelector("#runSummary").textContent = Math.floor(state.runCoins) + " Münzen verdient · bleiben erhalten";
   finalScore.textContent = state.score;
   gameOverScreen.classList.remove("hidden");
+}
+
+function reachedRunSegment() {
+  const total=Math.max(1,state.runStartSegments||SEGMENTS_PER_SNAKE);
+  if(state.mode==="victory")return total;
+  return Math.min(total,Math.max(1,total-state.snake.length+1));
+}
+
+function runShareText() {
+  return "Ich bin im Level "+state.level+" bis zum Segment "+reachedRunSegment()+
+    " gekommen und habe "+state.score.toLocaleString("de-DE")+" Punkte bekommen.";
+}
+
+async function shareRunResult() {
+  const button=document.querySelector("#shareRunButton"),status=document.querySelector("#shareRunStatus");
+  const text=runShareText();button.disabled=true;status.textContent="";
+  try {
+    if(typeof navigator!=="undefined"&&typeof navigator.share==="function") {
+      await navigator.share({title:"The Snake",text,url:window.location.href});
+      status.textContent="Ergebnis geteilt.";
+    } else if(typeof navigator!=="undefined"&&navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text+" "+window.location.href);
+      status.textContent="Ergebnis und Spiellink kopiert.";
+    } else {
+      const copy=document.createElement("textarea");copy.value=text+" "+window.location.href;
+      copy.setAttribute("readonly","");copy.style.position="fixed";copy.style.opacity="0";
+      document.body.append(copy);copy.select();document.execCommand("copy");copy.remove();
+      status.textContent="Ergebnis und Spiellink kopiert.";
+    }
+  } catch(error) {
+    if(error?.name!=="AbortError")status.textContent="Teilen war nicht möglich. Bitte versuche es erneut.";
+  } finally { button.disabled=false; }
 }
 
 function refreshHud() {
@@ -679,6 +736,7 @@ function refreshHud() {
   scoreEl.textContent = state.score;
   damageEl.textContent = state.weapon.damage.toLocaleString("de-DE", {minimumFractionDigits: 2, maximumFractionDigits: 2});
   fireRateEl.textContent = `${(state.weapon.shotsPerSecond / 2.7).toFixed(1)}×`;
+  document.querySelector("#shooterCombatStatus").textContent=shooterStatusText();
 }
 
 function renderProfile() {
@@ -689,6 +747,8 @@ function renderProfile() {
   renderNecromancerProfile();
   renderAlchemistProfile();
   renderRunemasterProfile();
+  renderIlyraProfile();
+  renderSeraphineProfile();
   document.querySelector("#menuCoins").textContent = p.coins.toLocaleString("de-DE");
   document.querySelector("#profileStats").textContent =
     p.coins + " Münzen · Rekord " + p.best + " · " + p.defeated + " Teile besiegt · " + p.runs + " Runden";
@@ -718,7 +778,7 @@ function showMenu() {
 }
 
 function selectMenuPage(page) {
-  for (const name of ["Home", "Upgrades", "Heroes", "Options", "LevelLab"]) {
+  for (const name of ["Home", "Upgrades", "Heroes", "Options"]) {
     const active = name === page;
     const panel = document.querySelector("#menu" + name);
     const button = document.querySelector("#nav" + name);
@@ -727,93 +787,21 @@ function selectMenuPage(page) {
     button.setAttribute("aria-pressed", String(active));
   }
 }
-for (const page of ["Home", "Upgrades", "Heroes", "Options", "LevelLab"]) {
+for (const page of ["Home", "Upgrades", "Heroes", "Options"]) {
   document.querySelector("#nav" + page).addEventListener("click", () => {
     if (state.mode === "start") selectMenuPage(page);
   });
 }
 
-let loadedCustomLevel=null,loadedCustomLevelSource="";
-function selectedCustomLevel(level=loadedCustomLevel) {
-  return level?SnakeCustomLevel.selectDifficulty(level,progress.data.difficulty):null;
-}
-function showCustomLevel(level,source) {
-  loadedCustomLevel=level;loadedCustomLevelSource=source;
-  const selected=selectedCustomLevel(level);
-  const labels={easy:"Leicht",normal:"Mittel",hard:"Schwer"};
-  const segments=selected.snakes.reduce((sum,snake)=>sum+snake.segments,0);
-  const waypointCount=selected.snakes.reduce((sum,snake)=>sum+snake.waypoints.length,0);
-  const pngs=new Set();
-  for(const snake of selected.snakes){pngs.add(snake.headPng);pngs.add(snake.bodyPng);}
-  for(const obstacle of selected.obstacles)if(obstacle.png)pngs.add(obstacle.png);
-  const summary=document.querySelector("#customLevelSummary");
-  summary.className="custom-level-summary ready";
-  summary.innerHTML="<strong></strong><span></span><span></span><span></span><span></span><span></span>";
-  const rows=summary.querySelectorAll("span");
-  summary.querySelector("strong").textContent=level.name;
-  rows[0].textContent="Aktiv: "+labels[selected.difficultyKey]+" · "+selected.snakes.length+" Schlangen · "+segments+" Segmente · "+waypointCount+" Wegpunkte";
-  rows[1].textContent=selected.obstacles.length+" Hindernisse · Spielfeld "+level.width+" × "+level.height;
-  rows[2].textContent="HP "+selected.firstHp.toLocaleString("de-DE")+"–"+selected.lastHp.toLocaleString("de-DE")+(selected.hpFallback?" (Fallback, da im Export noch keine HP stehen)":"");
-  rows[3].textContent=level.version===2?"Format 2: Leicht, Mittel und Schwer besitzen eigene Wege und Hindernisse.":"Format 1: Für alle Schwierigkeiten wird derselbe Levelaufbau verwendet.";
-  rows[4].textContent="Quelle: "+source+" · PNGs: "+Array.from(pngs).join(", ");
-  document.querySelector("#startCustomLevel").disabled=false;
-}
-function showCustomLevelError(error) {
-  loadedCustomLevel=null;
-  const summary=document.querySelector("#customLevelSummary");
-  summary.className="custom-level-summary error";
-  summary.innerHTML="<strong>Level konnte nicht geladen werden.</strong><span></span>";
-  summary.querySelector("span").textContent=String(error?.message||error);
-  document.querySelector("#startCustomLevel").disabled=true;
-}
-async function loadRepositoryCustomLevel() {
-  try{
-    const filename=document.querySelector("#repositoryLevelName").value.trim();
-    const result=await SnakeCustomLevel.fromRepository(filename);
-    try{localStorage.setItem("the-snake.test-level-file",result.filename);}catch{}
-    showCustomLevel(result.level,result.filename+" im GitHub-Hauptordner");
-  }catch(error){showCustomLevelError(error);}
-}
-async function loadLocalCustomLevel() {
-  try{
-    const file=document.querySelector("#customLevelFile").files[0];
-    const level=await SnakeCustomLevel.fromFile(file);
-    showCustomLevel(level,file.name+" vom Gerät");
-  }catch(error){showCustomLevelError(error);}
-}
-document.querySelector("#loadRepositoryLevel").addEventListener("click",loadRepositoryCustomLevel);
-document.querySelector("#loadLocalLevel").addEventListener("click",loadLocalCustomLevel);
-document.querySelector("#startCustomLevel").addEventListener("click",()=>{
-  if(state.mode!=="start"||!loadedCustomLevel)return;
-  state.customLevel=selectedCustomLevel();state.isCustomRun=true;startGame();
-});
-try{
-  const saved=localStorage.getItem("the-snake.test-level-file");
-  if(saved)document.querySelector("#repositoryLevelName").value=saved;
-}catch{}
-
 for (const value of [.10,.15,.20]) {
   document.querySelector('input[name="difficulty"][value="'+value.toFixed(2)+'"]').addEventListener("change",()=>{
     if(state.mode!=="start")return;
-    progress.data.difficulty=value;progress.save();syncDifficultyRadios();renderLevelPicker();
-    if(loadedCustomLevel)showCustomLevel(loadedCustomLevel,loadedCustomLevelSource);
+    progress.data.difficulty=value;progress.save();renderLevelPicker();
   });
-}
-for (const value of [.10,.15,.20]) {
-  document.querySelector('input[name="customDifficulty"][value="'+value.toFixed(2)+'"]').addEventListener("change",()=>{
-    if(state.mode!=="start")return;
-    progress.data.difficulty=value;progress.save();syncDifficultyRadios();renderLevelPicker();
-    if(loadedCustomLevel)showCustomLevel(loadedCustomLevel,loadedCustomLevelSource);
-  });
-}
-function syncDifficultyRadios() {
-  for(const name of ["difficulty","customDifficulty"]){
-    const radio=document.querySelector('input[name="'+name+'"][value="'+progress.data.difficulty.toFixed(2)+'"]');
-    if(radio)radio.checked=true;
-  }
 }
 function restoreDifficulty() {
-  syncDifficultyRadios();
+  const radio = document.querySelector('input[name="difficulty"][value="' + progress.data.difficulty.toFixed(2) + '"]');
+  if (radio) radio.checked = true;
 }
 
 document.querySelector("#unlockPaladin").addEventListener("click",()=>{
@@ -938,34 +926,23 @@ function burst(x, y, color, count) {
 function draw() {
   ctx.clearRect(0, 0, state.width, state.height);
   drawBackground();
-  drawCustomObstacles();
   for (let i = state.snake.length - 1; i >= 0; i--) drawSegment(state.snake[i], false);
-  const head = snakeHead();
-  if (head) drawSegment(head, true);
+  for(const instance of livingSnakeInstances()){
+    const head=snakeHead(instance);if(head){drawSegment(head,true);if(instance.rageActive){ctx.save();ctx.strokeStyle="#ff5a45";ctx.fillStyle="#ffb06b";ctx.shadowColor="#ff3b28";ctx.shadowBlur=16;ctx.lineWidth=3;ctx.beginPath();ctx.arc(head.x,head.y,23,0,Math.PI*2);ctx.stroke();ctx.font="bold 10px system-ui";ctx.textAlign="center";ctx.fillText("RAGE",head.x,head.y-27);ctx.restore();}}
+  }
   // Nach allen Sprites zeichnen, damit Nachbarteile die Zahlen nicht verdecken.
   for (const segment of state.snake) drawHpLabel(segment);
   drawBullets();
   drawPlayer();
+  drawShooterEffects();
   drawPaladin();
   drawHolyEffects();
   drawNecromancer();
   drawAlchemist();
   drawRunemaster();
+  drawIlyra();
+  drawSeraphine();
   drawParticles();
-}
-
-function drawCustomObstacles() {
-  if(!state.isCustomRun)return;
-  for(const obstacle of state.customObstacles){
-    if(obstacle.y+obstacle.height<0||obstacle.y>state.height||obstacle.x+obstacle.width<0||obstacle.x>state.width)continue;
-    if(obstacle.image?.complete&&obstacle.image.naturalWidth){
-      ctx.drawImage(obstacle.image,obstacle.x-obstacle.width/2,obstacle.y-obstacle.height/2,obstacle.width,obstacle.height);
-    }else{
-      ctx.save();ctx.fillStyle="#254f35";ctx.strokeStyle="#81bd61";ctx.lineWidth=2;
-      ctx.beginPath();ctx.roundRect(obstacle.x-obstacle.width/2,obstacle.y-obstacle.height/2,obstacle.width,obstacle.height,Math.min(12,obstacle.width/4));ctx.fill();ctx.stroke();
-      ctx.fillStyle="#d9f6c6";ctx.font="bold 9px system-ui";ctx.textAlign="center";ctx.fillText(obstacle.name,obstacle.x,obstacle.y+3);ctx.restore();
-    }
-  }
 }
 
 function drawBackground() {
@@ -1070,6 +1047,10 @@ function drawBullets() {
       ctx.save();ctx.shadowColor="#7cff59";ctx.shadowBlur=12;ctx.fillStyle=bullet.mixture==="fire"?"#ff9d45":bullet.mixture==="frost"?"#70dfff":bullet.mixture==="acid"?"#e9ff5b":bullet.mixture==="plague"?"#bb76ff":"#78ee59";ctx.beginPath();ctx.arc(bullet.x,bullet.y,5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e9f4d5";ctx.fillRect(bullet.x-3,bullet.y-8,6,4);ctx.restore();
     } else if (bullet.owner === "runemaster") {
       ctx.save();ctx.translate(bullet.x,bullet.y);ctx.rotate(performance.now()/250);ctx.strokeStyle=bullet.runeStrike?"#d6b6ff":"#6ed6ff";ctx.shadowColor="#4caeff";ctx.shadowBlur=14;ctx.lineWidth=2;ctx.beginPath();ctx.rect(-5,-5,10,10);ctx.stroke();ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.stroke();ctx.restore();
+    } else if (bullet.owner === "ilyra") {
+      ctx.save();ctx.translate(bullet.x,bullet.y);ctx.rotate(Math.atan2(bullet.vy,bullet.vx)+Math.PI/2);ctx.shadowColor="#8de8ff";ctx.shadowBlur=14;ctx.fillStyle="#e9fdff";ctx.beginPath();ctx.moveTo(0,-8*(bullet.size||1));ctx.lineTo(4*(bullet.size||1),5*(bullet.size||1));ctx.lineTo(0,3*(bullet.size||1));ctx.lineTo(-4*(bullet.size||1),5*(bullet.size||1));ctx.closePath();ctx.fill();ctx.strokeStyle="#8bdfff";ctx.beginPath();ctx.moveTo(0,5);ctx.lineTo(0,13);ctx.stroke();ctx.restore();
+    } else if (bullet.owner === "seraphine") {
+      const scale=bullet.fireWave?1.35:1;ctx.save();ctx.shadowColor="#ff4318";ctx.shadowBlur=16;ctx.fillStyle="#fff28a";ctx.beginPath();ctx.arc(bullet.x,bullet.y,4.5*scale,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#ff7a24";ctx.lineWidth=3*scale;ctx.beginPath();ctx.moveTo(bullet.x,bullet.y+2);ctx.lineTo(bullet.x-bullet.vx*.018,bullet.y-bullet.vy*.018);ctx.stroke();ctx.restore();
     } else if (bullet.owner === "paladin") {
       const size=12*(bullet.size||1.4);
       ctx.shadowColor = bullet.charged ? "#fff5c2" : "#ffc84a";
@@ -1160,8 +1141,9 @@ window.addEventListener("keyup",event=>{
 });
 window.addEventListener("blur",()=>{releaseDrag();state.keyboardLeft=false;state.keyboardRight=false;});
 
-document.querySelector("#startButton").addEventListener("click",()=>{state.isCustomRun=false;state.customLevel=null;startGame();});
+document.querySelector("#startButton").addEventListener("click", startGame);
 document.querySelector("#restartButton").addEventListener("click", startGame);
+document.querySelector("#shareRunButton").addEventListener("click", shareRunResult);
 window.addEventListener("resize", resizeCanvas);
 if (typeof ResizeObserver !== "undefined") new ResizeObserver(resizeCanvas).observe(wrap);
 
@@ -1170,7 +1152,7 @@ function reportGameError(error) {
   state.errorResumeMode=state.mode;
   state.mode="error";
   state.pointerDown=false;state.pointerId=null;
-  const details="Testversion 19.0 · "+(state.isCustomRun?(state.customLevel?.name||"Eigenes Level"):("Level "+state.level))+" · Upgrade: "+(state.lastUpgrade||"keines")+
+  const details="Version 23.1 Test · Level "+state.level+" · Upgrade: "+(state.lastUpgrade||"keines")+
     "\n"+String(error?.message||error)+"\n"+String(error?.stack||"").slice(0,2500);
   state.lastError=details;
   document.querySelector("#gameErrorDetails").textContent=details;
@@ -1210,7 +1192,10 @@ document.querySelector("#nextLevel").addEventListener("click",()=>changeLevel(1)
 bindNecromancerMenu();
 bindAlchemistMenu();
 bindRunemasterMenu();
+bindIlyraMenu();
+bindSeraphineMenu();
 bindSkillsMenu();
+bindHalloweenTheme();
 resizeCanvas();
 createSnake(SEGMENTS_PER_SNAKE);
 restoreDifficulty();
